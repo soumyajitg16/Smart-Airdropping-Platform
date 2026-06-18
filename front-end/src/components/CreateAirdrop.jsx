@@ -406,7 +406,7 @@ export default function CreateAirdrop() {
                 {name}
               </span>
             </div>
-            {i < 2 && <ArrowRight className="h-3 w-3 text-slate-800 mx-2 flex-1 max-w-[40px]" />}
+            {i < 2 && <ArrowRight className="h-3 w-3 text-slate-800 mx-2 flex-1 max-w-10" />}
           </React.Fragment>
         ))}
       </div>
@@ -420,13 +420,13 @@ export default function CreateAirdrop() {
               <h2 className="text-md font-bold text-slate-100 tracking-tight">
                 Token Distribution Setup
               </h2>
-              <p className="text-slate-400 text-xs max-w-[380px] leading-relaxed">
+              <p className="text-slate-400 text-xs max-w-95 leading-relaxed">
                 Select a distribution method and define allocation limits.
               </p>
             </div>
 
             {step === 1 && (
-              <div className="bg-slate-950 p-0.5 rounded-xl border border-slate-800/50 flex space-x-0.5 min-w-[160px] h-9 shadow-inner self-center sm:self-auto relative z-20">
+              <div className="bg-slate-950 p-0.5 rounded-xl border border-slate-800/50 flex space-x-0.5 min-w-40 h-9 shadow-inner self-center sm:self-auto relative z-20">
                 <button
                   type="button"
                   onClick={() => setDistributionMode('pull')}
@@ -506,7 +506,7 @@ export default function CreateAirdrop() {
                   </div>
                 </div>
 
-                <div className="bg-slate-950/60 border border-slate-900 rounded-xl overflow-hidden focus-within:border-indigo-500/50 transition-all flex flex-col min-h-[170px]">
+                <div className="bg-slate-950/60 border border-slate-900 rounded-xl overflow-hidden focus-within:border-indigo-500/50 transition-all flex flex-col min-h-42.5">
                   <div className="flex flex-1 relative">
                     <div className="w-9 bg-slate-950 text-slate-700 text-right pr-2.5 pt-2.5 font-mono text-xs select-none border-r border-slate-900/40">
                       {recipients.split('\n').map((_, index) => (
@@ -517,7 +517,7 @@ export default function CreateAirdrop() {
                       placeholder="Enter distribution list as: address, amount (one per line)"
                       value={recipients}
                       onChange={(e) => setRecipients(e.target.value)}
-                      className="w-full bg-transparent text-slate-300 p-2.5 font-mono text-xs outline-none resize-none leading-5 min-h-[120px] placeholder:text-slate-800"
+                      className="w-full bg-transparent text-slate-300 p-2.5 font-mono text-xs outline-none resize-none leading-5 min-h-30 placeholder:text-slate-800"
                     />
                   </div>
 
@@ -535,7 +535,7 @@ export default function CreateAirdrop() {
                         className="flex items-center space-x-1.5 bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-all shadow-sm cursor-pointer"
                       >
                         <Upload className="h-3 w-3 text-slate-400" />
-                        <span>Upload CSV / Text</span>
+                        <span>Upload CSV / TEXT</span>
                       </button>
                     </div>
                   </div>
@@ -580,9 +580,9 @@ export default function CreateAirdrop() {
               </div>
 
               <div className="bg-slate-950/50 border border-slate-900 rounded-xl p-5 font-mono text-xs max-w-md mx-auto text-slate-300 space-y-2.5">
-                <div className="flex justify-between"><span className="text-slate-500">Token Address:</span> <span className="text-slate-300 truncate max-w-[200px]">{tokenAddress}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Token Address:</span> <span className="text-slate-300 truncate max-w-50">{tokenAddress}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Distribution Mode:</span> <span className="text-indigo-400 font-bold uppercase">{distributionMode}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Spender Address:</span> <span className="text-slate-300 truncate max-w-[200px]">{spenderAddress}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Spender Address:</span> <span className="text-slate-300 truncate max-w-50">{spenderAddress}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Total Recipients:</span> <span className="text-slate-300">{parsedEntries.length}</span></div>
                 <div className="flex justify-between border-t border-slate-900 pt-2 font-bold">
                   <span className="text-slate-500">Total Required:</span>

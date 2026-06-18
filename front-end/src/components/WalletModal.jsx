@@ -16,7 +16,7 @@ export default function WalletModal({ isOpen, onClose }) {
     <>
       {/* Invisible Full-Screen Backdrop (Blurs the rest of the app) */}
       <div
-        className="fixed inset-0 bg-slate-950/20 backdrop-blur-sm z-40 transition-all cursor-default animate-fade-in"
+        className="fixed inset-0 bg-slate-950/20 z-40 transition-all cursor-default animate-fade-in"
         onClick={onClose}
       />
 
@@ -50,10 +50,7 @@ export default function WalletModal({ isOpen, onClose }) {
               <div className="text-sm font-mono font-semibold text-slate-200">
                 {!wallet?.isConnected
                   ? "0.000 ETH"
-                  : balanceData?.formatted &&
-                      !isNaN(parseFloat(balanceData.formatted))
-                    ? `${parseFloat(String(balanceData.formatted).replace(/,/g, "")).toFixed(4)} ${balanceData.symbol || ""}`
-                    : "Loading..."}
+                  : `${wallet.balance} `}
               </div>
             </div>
           </div>

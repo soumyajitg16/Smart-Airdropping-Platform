@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi';
+import { formatUnits } from 'viem'; // Added to handle modern BigInt formatting safely
 import { injected } from 'wagmi/connectors';
 
 const AppContext = createContext();
@@ -34,17 +35,30 @@ export const AppProvider = ({ children }) => {
     localStorage.setItem('airdrops_data', JSON.stringify(airdrops));
   }, [airdrops]);
 
+  // Modern balance parsing using formatUnits
+  const rawBalanceFloatString = balanceData 
+    ? formatUnits(balanceData.value, balanceData.decimals) 
+    : "0";
+
   // Derived reactive wallet state
   const wallet = {
     isConnected: !!isConnected,
     address: address || null,
     network: chain?.name || null,
-    balance: balanceData ? `${parseFloat(balanceData.formatted).toFixed(3)} ${balanceData.symbol}` : null,
+    balance: balanceData 
+      ? `${parseFloat(rawBalanceFloatString).toFixed(3)} A-${balanceData.symbol}` 
+      : null,
   };
+
+  // Logs updated cleanly without string interpolation execution errors
+  console.log("Wallet State:", wallet);
+  console.log("Balance using, Wallet State:", wallet.balance);
+  console.log("Balance Data:", balanceData);
 
   const connectWallet = () => {
     if (connectors.length > 0) {
       connect({ connector: connectors[0] });
+      setIsWalletModalOpen(false); // Clean UX: Close modal when initialization begins
     }
   };
 
