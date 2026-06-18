@@ -17,8 +17,8 @@ export default function AirdropsList() {
     <div className="max-w-3xl mx-auto mt-16 px-4 text-white animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Active Distributions</h1>
-          <p className="text-slate-500 text-xs mt-0.5">Click to know more.</p>
+          <h1 className="text-xl font-semibold tracking-tight">All Distributions</h1>
+          <p className="text-slate-500 text-xs mt-0.5">Click to know more about a campaign</p>
         </div>
         
         <div className="relative">

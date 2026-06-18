@@ -6,16 +6,16 @@ import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 
 import { MerkleTree } from 'merkletreejs';
 import { keccak256, encodePacked } from 'viem';
 import { ERC20_ABI, FACTORY_ADDRESS, FACTORY_ABI, PUSH_AIRDROP_ADDRESS, PUSH_AIRDROP_ABI } from '../constants/contracts';
-import { useNavigate } from 'react-router-dom'; // 1. Import useNavigate
+import { useNavigate } from 'react-router-dom';
 
 export default function CreateAirdrop() {
   const { wallet, connectWallet, setAirdrops, airdrops } = useApp();
-  const navigate = useNavigate(); // 2. Initialize navigate hook
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [distributionMode, setDistributionMode] = useState('pull');
   const [tokenAddress, setTokenAddress] = useState('');
   const [recipients, setRecipients] = useState('');
-  const [durationDays, setDurationDays] = useState('7'); // Default duration in days for Pull model
+  const [durationDays, setDurationDays] = useState('7');
   
   // UI Errors and Loading states
   const [validationErrors, setValidationErrors] = useState([]);
@@ -34,21 +34,20 @@ export default function CreateAirdrop() {
   const [pushBatches, setPushBatches] = useState([]);
   const [currentBatchIndex, setCurrentBatchIndex] = useState(0);
   const [batchTxHash, setBatchTxHash] = useState(null);
+  const [isPushCompleted, setIsPushCompleted] = useState(false);
 
   const fileInputRef = useRef(null);
 
   const isValidTokenAddress = isAddress(tokenAddress);
 
   // --- WAGMI READ CONTRACTS ---
-  // Fetch Token Decimals
-  const { data: tokenDecimals, isLoading: isLoadingDecimals } = useReadContract({
+  const { data: tokenDecimals } = useReadContract({
     address: isValidTokenAddress ? tokenAddress : undefined,
     abi: ERC20_ABI,
     functionName: 'decimals',
     query: { enabled: isValidTokenAddress },
   });
 
-  // Fetch Token Symbol
   const { data: tokenSymbol } = useReadContract({
     address: isValidTokenAddress ? tokenAddress : undefined,
     abi: ERC20_ABI,
@@ -56,7 +55,6 @@ export default function CreateAirdrop() {
     query: { enabled: isValidTokenAddress },
   });
 
-  // Fetch User's Token Balance
   const { data: userTokenBalance, refetch: refetchBalance } = useReadContract({
     address: isValidTokenAddress && wallet.address ? tokenAddress : undefined,
     abi: ERC20_ABI,
@@ -65,10 +63,8 @@ export default function CreateAirdrop() {
     query: { enabled: isValidTokenAddress && wallet.isConnected },
   });
 
-  // Spender target depends on distribution mode
   const spenderAddress = distributionMode === 'pull' ? FACTORY_ADDRESS : PUSH_AIRDROP_ADDRESS;
 
-  // Fetch Allowance
   const { data: currentAllowance, refetch: refetchAllowance } = useReadContract({
     address: isValidTokenAddress && wallet.address ? tokenAddress : undefined,
     abi: ERC20_ABI,
@@ -80,17 +76,14 @@ export default function CreateAirdrop() {
   // --- WAGMI WRITE CONTRACTS ---
   const { writeContractAsync: writeContract, isPending: isTxPending } = useWriteContract();
 
-  // Wait for Approval TX
   const { isLoading: isWaitingApprove, isSuccess: isApproveSuccess } = useWaitForTransactionReceipt({
     hash: approveTxHash,
   });
 
-  // Wait for Deploy TX (Pull Model)
   const { data: deployReceipt, isLoading: isWaitingDeploy, isSuccess: isDeploySuccess } = useWaitForTransactionReceipt({
     hash: deployTxHash,
   });
 
-  // Wait for Batch TX (Push Model)
   const { isLoading: isWaitingBatch, isSuccess: isBatchSuccess } = useWaitForTransactionReceipt({
     hash: batchTxHash,
   });
@@ -106,7 +99,6 @@ export default function CreateAirdrop() {
       const trimmed = line.trim();
       if (!trimmed) continue;
       
-      // Split by common CSV delimiters
       const parts = trimmed.split(/[;,\t]/).map(p => p.trim());
       let address = '';
       let amount = '';
@@ -119,7 +111,6 @@ export default function CreateAirdrop() {
         }
       }
       
-      // Fallback split if there are no delimiters (e.g., whitespace separated)
       if (!address || !amount) {
         const spaceParts = trimmed.split(/\s+/).map(p => p.trim());
         for (const part of spaceParts) {
@@ -207,7 +198,6 @@ export default function CreateAirdrop() {
     }
   }, [recipients, tokenAddress, decimals]);
 
-  // Refetch allowance/balance when approval succeeds
   useEffect(() => {
     if (isApproveSuccess) {
       refetchAllowance();
@@ -220,7 +210,6 @@ export default function CreateAirdrop() {
   useEffect(() => {
     if (isDeploySuccess && deployReceipt) {
       let clone = '';
-      // Decode events to find clone address
       for (const log of deployReceipt.logs) {
         try {
           const decoded = decodeEventLog({
@@ -233,15 +222,12 @@ export default function CreateAirdrop() {
             clone = decoded.args.cloneAddress;
             break;
           }
-        } catch (e) {
-          // Ignore logs of other contracts
-        }
+        } catch (e) {}
       }
 
       const targetClone = clone || '0x...';
       setDeployedCloneAddress(targetClone);
 
-      // Save campaign metadata to localStorage/state
       const leaves = parsedEntries.map(e => keccak256(encodePacked(['address', 'uint256'], [e.address, e.amountWei])));
       const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
       const root = tree.getHexRoot();
@@ -278,7 +264,7 @@ export default function CreateAirdrop() {
       if (nextIndex < pushBatches.length) {
         setCurrentBatchIndex(nextIndex);
       } else {
-        // All batches completed
+        // All batches completed atomically
         const newDrop = {
           id: Date.now().toString(),
           name: `Push Campaign #${airdrops.length + 1}`,
@@ -293,7 +279,7 @@ export default function CreateAirdrop() {
           decimals: decimals,
         };
         setAirdrops(prev => [newDrop, ...prev]);
-        setStep(3);
+        setIsPushCompleted(true);
       }
     }
   }, [isBatchSuccess]);
@@ -315,7 +301,6 @@ export default function CreateAirdrop() {
         return;
       }
 
-      // If Push model, initialize chunk batches (max 10 recipients per batch)
       if (distributionMode === 'push') {
         const batches = [];
         for (let i = 0; i < parsedEntries.length; i += 10) {
@@ -336,7 +321,6 @@ export default function CreateAirdrop() {
     }
   };
 
-  // --- TX HANDLERS ---
   const handleApprove = async () => {
     setErrorMsg('');
     try {
@@ -357,7 +341,6 @@ export default function CreateAirdrop() {
     setErrorMsg('');
     try {
       if (distributionMode === 'pull') {
-        // Generate Merkle Root
         const leaves = parsedEntries.map(e => keccak256(encodePacked(['address', 'uint256'], [e.address, e.amountWei])));
         const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
         const root = tree.getHexRoot();
@@ -373,7 +356,6 @@ export default function CreateAirdrop() {
         });
         setDeployTxHash(hash);
       } else {
-        // Deploying current batch for Push model
         const currentBatch = pushBatches[currentBatchIndex];
         const hash = await writeContract({
           address: PUSH_AIRDROP_ADDRESS,
@@ -397,6 +379,7 @@ export default function CreateAirdrop() {
     setDeployedMerkleRoot('');
     setPushBatches([]);
     setCurrentBatchIndex(0);
+    setIsPushCompleted(false);
   };
 
   const isFormInvalid = !isValidTokenAddress || parsedEntries.length === 0 || validationErrors.length > 0;
@@ -406,7 +389,6 @@ export default function CreateAirdrop() {
   return (
     <div className="max-w-2xl mx-auto mt-6 px-4 relative animate-fade-in">
       
-      {/* Flattened Progress Monitor */}
       <div className="flex items-center justify-between w-full mb-3 bg-slate-950/20 p-1.5 rounded-xl border border-slate-900/60 transition-all duration-300">
         {['Preparation', 'Approval', 'Distribution'].map((name, i) => (
           <React.Fragment key={name}>
@@ -429,13 +411,10 @@ export default function CreateAirdrop() {
         ))}
       </div>
 
-      {/* Main Container Card */}
       <div className="bg-slate-900/40 border border-slate-900 rounded-2xl p-6 shadow-2xl backdrop-blur-sm relative">
         <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-slate-800 to-transparent" />
         
-        {/* Core Content Form Container */}
         <div>
-          {/* Styled Control Zone Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 -mx-6 -mt-6 mb-6 bg-slate-950/40 border-b border-slate-900/80 rounded-t-2xl">
             <div className="space-y-1">
               <h2 className="text-md font-bold text-slate-100 tracking-tight">
@@ -563,7 +542,6 @@ export default function CreateAirdrop() {
                 </div>
               </div>
 
-              {/* Validation Errors Box */}
               {validationErrors.length > 0 && (
                 <div className="bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl p-4.5 text-xs max-h-48 overflow-y-auto space-y-1">
                   <div className="font-bold flex items-center gap-1.5 text-red-300 mb-1">
@@ -576,7 +554,6 @@ export default function CreateAirdrop() {
                 </div>
               )}
 
-              {/* Suggestion Warn Warning when recipient count is > 10 in push mode */}
               {parsedEntries.length > 10 && distributionMode === 'push' && (
                 <div className="bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-xl p-4.5 text-xs flex gap-3">
                   <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400 mt-0.5" />
@@ -621,7 +598,6 @@ export default function CreateAirdrop() {
                 )}
               </div>
 
-              {/* Error messages box */}
               {errorMsg && (
                 <div className="bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl p-4 text-xs max-w-md mx-auto flex gap-2">
                   <AlertTriangle className="h-4 w-4 shrink-0 text-red-400 mt-0.5" />
@@ -629,7 +605,6 @@ export default function CreateAirdrop() {
                 </div>
               )}
 
-              {/* Allowance & Balance checks block */}
               <div className="max-w-md mx-auto space-y-3">
                 {!isBalanceSufficient ? (
                   <div className="bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl p-4 text-xs flex gap-2">
@@ -666,7 +641,6 @@ export default function CreateAirdrop() {
           {step === 3 && (
             <div className="text-center py-6 space-y-6">
               {distributionMode === 'pull' ? (
-                // Pull Model deployment step or success
                 !deployedCloneAddress ? (
                   <div className="space-y-4 max-w-md mx-auto">
                     <Info className="h-10 w-10 text-indigo-400 mx-auto" />
@@ -697,7 +671,6 @@ export default function CreateAirdrop() {
                     </button>
                   </div>
                 ) : (
-                  // Pull Success Screen
                   <div className="space-y-4 max-w-md mx-auto animate-fade-in">
                     <div className="h-12 w-12 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-2">
                       <CheckCircle2 className="h-6 w-6" />
@@ -715,7 +688,6 @@ export default function CreateAirdrop() {
                       <div><span className="text-slate-500">Total Funded:</span> <span className="text-emerald-400">{formattedTotal} {tokenSymbol}</span></div>
                     </div>
 
-                    {/* REDIRECT TO SPECIFIC CAMPAIGN DETAILS BUTTON */}
                     <button
                       onClick={() => navigate(`/airdrops/${airdrops[0].id}`)}
                       className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-semibold text-xs tracking-wide transition-all cursor-pointer mb-2"
@@ -732,63 +704,95 @@ export default function CreateAirdrop() {
                   </div>
                 )
               ) : (
-                // Push Model Sequential batching screens
-                <div className="space-y-5 max-w-md mx-auto">
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-100">Direct Batch Multi-Send</h3>
-                    <p className="text-slate-400 text-xs mt-1">
-                      Sequential batch queue: {pushBatches.length} transactions required.
-                    </p>
-                  </div>
+                !isPushCompleted ? (
+                  <div className="space-y-5 max-w-md mx-auto">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-100">Direct Batch Multi-Send</h3>
+                      <p className="text-slate-400 text-xs mt-1">
+                        Sequential batch queue: {pushBatches.length} transactions required.
+                      </p>
+                    </div>
 
-                  <div className="bg-slate-950/50 border border-slate-900 rounded-xl p-4 text-left space-y-3">
-                    {pushBatches.map((batch, index) => (
-                      <div key={index} className="flex items-center justify-between text-xs font-mono">
-                        <span className={index === currentBatchIndex ? "text-indigo-400 font-bold" : index < currentBatchIndex ? "text-emerald-400 line-through" : "text-slate-600"}>
-                          Batch #{index + 1}: {batch.recipients.length} Recipient(s)
-                        </span>
-                        <span className={index === currentBatchIndex ? "text-indigo-300 font-bold" : index < currentBatchIndex ? "text-emerald-500" : "text-slate-600"}>
-                          {index === currentBatchIndex ? "PROCESSING" : index < currentBatchIndex ? "✓ COMPLETE" : "QUEUED"}
-                        </span>
+                    <div className="bg-slate-950/50 border border-slate-900 rounded-xl p-4 text-left space-y-3">
+                      {pushBatches.map((batch, index) => (
+                        <div key={index} className="flex items-center justify-between text-xs font-mono">
+                          <span className={index === currentBatchIndex ? "text-indigo-400 font-bold" : index < currentBatchIndex ? "text-emerald-400 line-through" : "text-slate-600"}>
+                            Batch #{index + 1}: {batch.recipients.length} Recipient(s)
+                          </span>
+                          <span className={index === currentBatchIndex ? "text-indigo-300 font-bold" : index < currentBatchIndex ? "text-emerald-500" : "text-slate-600"}>
+                            {index === currentBatchIndex ? "PROCESSING" : index < currentBatchIndex ? "✓ COMPLETE" : "QUEUED"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="bg-slate-950 border border-slate-900 rounded-xl p-4.5 text-left text-xs space-y-2">
+                      <h4 className="font-bold text-slate-400">Current Queue Parameter details:</h4>
+                      <div className="font-mono text-[11px] text-slate-300 space-y-1">
+                        <div>Recipients: {pushBatches[currentBatchIndex]?.recipients.length} Addresses</div>
+                        <div>Batch Cost: {pushBatches[currentBatchIndex]?.displayAmount} {tokenSymbol}</div>
                       </div>
-                    ))}
-                  </div>
-
-                  <div className="bg-slate-950 border border-slate-900 rounded-xl p-4.5 text-left text-xs space-y-2">
-                    <h4 className="font-bold text-slate-400">Current Queue Parameter details:</h4>
-                    <div className="font-mono text-[11px] text-slate-300 space-y-1">
-                      <div>Recipients: {pushBatches[currentBatchIndex]?.recipients.length} Addresses</div>
-                      <div>Batch Cost: {pushBatches[currentBatchIndex]?.displayAmount} {tokenSymbol}</div>
                     </div>
-                  </div>
 
-                  {errorMsg && (
-                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl text-left text-xs font-mono">
-                      {errorMsg}
-                    </div>
-                  )}
-
-                  <button
-                    onClick={handleDeployAirdrop}
-                    disabled={isTxPending || isWaitingBatch}
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-900 disabled:text-slate-600 border border-transparent text-white py-3 rounded-xl font-bold text-xs tracking-wider uppercase transition-all shadow-md flex justify-center items-center gap-2 cursor-pointer"
-                  >
-                    {isTxPending || isWaitingBatch ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Executing Batch Multi-Send #{currentBatchIndex + 1}...</span>
-                      </>
-                    ) : (
-                      <span>Execute Batch #{currentBatchIndex + 1} Transaction</span>
+                    {errorMsg && (
+                      <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl text-left text-xs font-mono">
+                        {errorMsg}
+                      </div>
                     )}
-                  </button>
-                </div>
+
+                    <button
+                      onClick={handleDeployAirdrop}
+                      disabled={isTxPending || isWaitingBatch}
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-900 disabled:text-slate-600 border border-transparent text-white py-3 rounded-xl font-bold text-xs tracking-wider uppercase transition-all shadow-md flex justify-center items-center gap-2 cursor-pointer"
+                    >
+                      {isTxPending || isWaitingBatch ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Executing Batch Multi-Send #{currentBatchIndex + 1}...</span>
+                        </>
+                      ) : (
+                        <span>Execute Batch #{currentBatchIndex + 1} Transaction</span>
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4 max-w-md mx-auto animate-fade-in">
+                    <div className="h-12 w-12 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <CheckCircle2 className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-100">Push Distribution Completed</h3>
+                      <p className="text-slate-400 text-xs mt-1">
+                        All token batches have been successfully transmitted on-chain.
+                      </p>
+                    </div>
+                    <div className="bg-slate-950/60 border border-slate-900 rounded-xl p-4.5 font-mono text-[11px] text-left space-y-1.5 text-slate-300">
+                      <div><span className="text-slate-500">Distribution Contract:</span> <span className="text-emerald-400 font-bold select-all">{PUSH_AIRDROP_ADDRESS}</span></div>
+                      <div><span className="text-slate-500">Token Address:</span> <span className="text-slate-400 truncate">{tokenAddress}</span></div>
+                      <div><span className="text-slate-500">Total Transferred:</span> <span className="text-emerald-400">{formattedTotal} {tokenSymbol}</span></div>
+                      <div><span className="text-slate-500">Total Batches:</span> <span className="text-slate-400">{pushBatches.length}</span></div>
+                    </div>
+
+                    <button
+                      onClick={() => navigate(`/airdrops/${airdrops[0].id}`)}
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-semibold text-xs tracking-wide transition-all cursor-pointer mb-2"
+                    >
+                      View Campaign Details
+                    </button>
+
+                    <button
+                      onClick={finalizeAirdrop}
+                      className="w-full bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 py-3 rounded-xl font-semibold text-xs tracking-wide transition-all cursor-pointer"
+                    >
+                      Configure New Campaign
+                    </button>
+                  </div>
+                )
               )}
             </div>
           )}
         </div>
 
-        {/* Action Engine Footer */}
         {step < 3 && (
           <div className="mt-6 pt-5 border-t border-slate-900/50 relative z-20">
             <button
