@@ -6,9 +6,11 @@ import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 
 import { MerkleTree } from 'merkletreejs';
 import { keccak256, encodePacked } from 'viem';
 import { ERC20_ABI, FACTORY_ADDRESS, FACTORY_ABI, PUSH_AIRDROP_ADDRESS, PUSH_AIRDROP_ABI } from '../constants/contracts';
+import { useNavigate } from 'react-router-dom'; // 1. Import useNavigate
 
 export default function CreateAirdrop() {
   const { wallet, connectWallet, setAirdrops, airdrops } = useApp();
+  const navigate = useNavigate(); // 2. Initialize navigate hook
   const [step, setStep] = useState(1);
   const [distributionMode, setDistributionMode] = useState('pull');
   const [tokenAddress, setTokenAddress] = useState('');
@@ -707,11 +709,20 @@ export default function CreateAirdrop() {
                       </p>
                     </div>
                     <div className="bg-slate-950/60 border border-slate-900 rounded-xl p-4.5 font-mono text-[11px] text-left space-y-1.5 text-slate-300">
-                      <div><span className="text-slate-500">Clone Contract:</span> <span className="text-emerald-400 font-bold select-all">{deployedCloneAddress}</span></div>
+                      <div><span className="text-slate-500">Airdrop Campaign Contract:</span> <span className="text-emerald-400 font-bold select-all">{deployedCloneAddress}</span></div>
                       <div><span className="text-slate-500">Token Address:</span> <span className="text-slate-400 truncate">{tokenAddress}</span></div>
                       <div><span className="text-slate-500">Merkle Root:</span> <span className="text-slate-400 truncate">{deployedMerkleRoot}</span></div>
                       <div><span className="text-slate-500">Total Funded:</span> <span className="text-emerald-400">{formattedTotal} {tokenSymbol}</span></div>
                     </div>
+
+                    {/* REDIRECT TO SPECIFIC CAMPAIGN DETAILS BUTTON */}
+                    <button
+                      onClick={() => navigate(`/airdrops/${airdrops[0].id}`)}
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-semibold text-xs tracking-wide transition-all cursor-pointer mb-2"
+                    >
+                      View Campaign Details
+                    </button>
+
                     <button
                       onClick={finalizeAirdrop}
                       className="w-full bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 py-3 rounded-xl font-semibold text-xs tracking-wide transition-all cursor-pointer"

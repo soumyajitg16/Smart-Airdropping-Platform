@@ -147,7 +147,7 @@ export default function AirdropDetails() {
         {/* Claim Navigation CTA */}
         {isPull && !isExpired && (
           <button 
-            onClick={() => navigate('/claim')}
+            onClick={() => navigate(`/claim?address=${drop.address}`)}
             className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/10 active:scale-99 cursor-pointer mb-4"
           >
             <ShieldCheck className="h-3.5 w-3.5 text-white" /> Redirect to Claim Verification Module

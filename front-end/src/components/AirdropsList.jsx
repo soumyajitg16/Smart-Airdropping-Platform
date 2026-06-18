@@ -18,7 +18,7 @@ export default function AirdropsList() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Active Distributions</h1>
-          <p className="text-slate-500 text-xs mt-0.5">Index registry mapping global asset drops.</p>
+          <p className="text-slate-500 text-xs mt-0.5">Click to know more.</p>
         </div>
         
         <div className="relative">
@@ -46,8 +46,8 @@ export default function AirdropsList() {
               className="p-4.5 bg-slate-900/30 border border-slate-900 hover:border-slate-800/80 rounded-2xl cursor-pointer transition-all duration-300 flex items-center justify-between group hover:-translate-y-0.5 shadow-sm"
             >
               <div className="flex items-center space-x-4">
-                <div className="h-9 w-9 rounded-xl bg-slate-950 border border-slate-900 flex items-center justify-center text-xs font-bold text-slate-400 group-hover:text-indigo-400 transition-colors">
-                  {drop.symbol.slice(0, 2)}
+                <div className="h-11 w-11 rounded-xl bg-slate-950 border border-slate-900 flex items-center justify-center text-xs font-bold text-slate-400 group-hover:text-indigo-400 transition-colors">
+                  {drop.symbol.slice(0, 4)}
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-slate-200 group-hover:text-white transition-colors">{drop.name}</h4>

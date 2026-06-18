@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // 1. Added useRef
 import { useApp } from '../context/AppContext';
 import { Search, UserCheck, Sparkles, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { isAddress, formatUnits, keccak256, encodePacked } from 'viem';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { MerkleTree } from 'merkletreejs';
 import { MERKLE_AIRDROP_ABI } from '../constants/contracts';
+import { useSearchParams } from 'react-router-dom'; // 2. Added useSearchParams
 
 export default function ClaimToken() {
   const { wallet, connectWallet, airdrops } = useApp();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchParams] = useSearchParams(); // 3. Invoke query params parser hook
+  
+  // 4. Initialize searchQuery reactive state directly from URL parameter fallback
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('address') || '');
   const [activeCampaign, setActiveCampaign] = useState(null);
   const [isVerified, setIsVerified] = useState(false);
   const [claimStatus, setClaimStatus] = useState('idle');
@@ -40,6 +44,12 @@ export default function ClaimToken() {
     query: { enabled: isValidCloneAddress },
   });
 
+  // 5. Save contractDeadline in a ref to safely bypass setTimeout closures
+  const deadlineRef = useRef(contractDeadline);
+  useEffect(() => {
+    deadlineRef.current = contractDeadline;
+  }, [contractDeadline]);
+
   // --- WAGMI WRITE CONTRACTS ---
   const { writeContractAsync: executeClaim, isPending: isClaimPending } = useWriteContract();
 
@@ -47,12 +57,12 @@ export default function ClaimToken() {
     hash: claimTxHash,
   });
 
-  const handleSearch = (e) => {
-    e.preventDefault();
+  // 6. Split core validation query logic to a reusable method
+  const performVerification = (targetAddress) => {
     setClaimError('');
     setIsVerified(false);
 
-    if (!isValidCloneAddress) {
+    if (!isAddress(targetAddress)) {
       setClaimError('Please enter a valid airdrop clone contract address.');
       setClaimStatus('error');
       return;
@@ -61,7 +71,7 @@ export default function ClaimToken() {
     setClaimStatus('searching');
 
     // Look up clone address in our stored campaigns
-    const campaign = airdrops.find(item => item.address.toLowerCase() === searchQuery.toLowerCase());
+    const campaign = airdrops.find(item => item.address.toLowerCase() === targetAddress.toLowerCase());
     
     setTimeout(() => {
       if (!campaign) {
@@ -87,8 +97,8 @@ export default function ClaimToken() {
         return;
       }
 
-      // Check deadline
-      const deadlineSecs = contractDeadline ? Number(contractDeadline) : 0;
+      // Check deadline from mutable ref setup safely
+      const deadlineSecs = deadlineRef.current ? Number(deadlineRef.current) : 0;
       const nowSecs = Math.floor(Date.now() / 1000);
       if (deadlineSecs > 0 && nowSecs > deadlineSecs) {
         setClaimError('This airdrop campaign has expired. Claiming is locked.');
@@ -103,6 +113,19 @@ export default function ClaimToken() {
       setClaimStatus('eligible');
     }, 800);
   };
+
+  const handleSearch = (e) => {
+    if (e) e.preventDefault();
+    performVerification(searchQuery);
+  };
+
+  // 7. Auto-verify if an address parameter is parsed on load once systemic indices mount
+  useEffect(() => {
+    const addressParam = searchParams.get('address');
+    if (addressParam && isAddress(addressParam) && wallet.isConnected && airdrops.length > 0) {
+      performVerification(addressParam);
+    }
+  }, [searchParams, wallet.isConnected, airdrops]);
 
   // Run validation checks when claims finish
   useEffect(() => {
