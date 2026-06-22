@@ -174,8 +174,8 @@ export default function ClaimToken() {
     <div className="max-w-lg mx-auto mt-16 px-4 text-white animate-fade-in">
       <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-8 shadow-2xl">
         <div className="text-center mb-6">
-          <h2 className="text-xl font-semibold tracking-tight">Claim Allocation Yield</h2>
-          <p className="text-slate-500 text-xs mt-1">Verify cryptographically signed account parameters.</p>
+          <h2 className="text-xl font-semibold tracking-tight">Verify Airdrop Eligibility</h2>
+          <p className="text-slate-500 text-xs mt-1">Verify your wallet address to see your eligible airdrop amount.</p>
         </div>
 
         <form onSubmit={handleSearch} className="mb-6">
@@ -184,7 +184,7 @@ export default function ClaimToken() {
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-600" />
               <input
                 type="text"
-                placeholder="Enter drop clone contract address (0x...)"
+                placeholder="Enter campaign contract address (0x...)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-slate-950/60 border border-slate-900 focus:border-slate-800 outline-none rounded-xl pl-9 pr-4 py-2.5 transition-all text-xs text-slate-300 placeholder:text-slate-700 font-mono"
@@ -220,7 +220,7 @@ export default function ClaimToken() {
                 <CheckCircle2 className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                 <div>
                   <h4 className="font-semibold text-amber-500 text-xs uppercase tracking-wider">Already Claimed</h4>
-                  <p className="text-slate-500 text-xs mt-1">This wallet address has already completed its claiming allocation for this campaign.</p>
+                  <p className="text-slate-500 text-xs mt-1">This wallet address has already claimed its tokens for this campaign. Try with another address!</p>
                 </div>
               </div>
             ) : (
@@ -229,7 +229,7 @@ export default function ClaimToken() {
                 <div>
                   <h4 className="font-semibold text-emerald-400 text-xs uppercase tracking-wider">Account Confirmed</h4>
                   <p className="text-slate-500 text-xs mt-1">
-                    Eligible for a reward yield of <strong className="text-emerald-400">{claimantFormattedAmount} {activeCampaign.symbol}</strong>.
+                    Eligible to claim <strong className="text-emerald-400">{claimantFormattedAmount} {activeCampaign.symbol}</strong>.
                   </p>
                 </div>
               </div>
@@ -246,7 +246,7 @@ export default function ClaimToken() {
                   className="h-3.5 w-3.5 rounded border-slate-800 text-indigo-600 focus:ring-0 bg-slate-900 cursor-pointer disabled:cursor-not-allowed"
                 />
                 <label htmlFor="verify" className="text-xs text-slate-400 select-none cursor-pointer disabled:opacity-50">
-                  Accept distribution constraint guidelines.
+                  I agree to the terms and conditions.
                 </label>
               </div>
               <UserCheck className={`h-4 w-4 ${isVerified && !hasClaimed ? 'text-indigo-400' : 'text-slate-700'}`} />
@@ -275,7 +275,7 @@ export default function ClaimToken() {
               ) : hasClaimed ? (
                 <span>Yield Fully Redeemed</span>
               ) : (
-                <span>Execute Asset Release</span>
+                <span>Claim Tokens</span>
               )}
             </button>
           </div>
@@ -286,15 +286,15 @@ export default function ClaimToken() {
             <div className="h-10 w-10 bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto">
               <CheckCircle2 className="h-5 w-5" />
             </div>
-            <h3 className="text-md font-medium text-slate-200">Asset Transferred Successfully</h3>
+            <h3 className="text-md font-medium text-slate-200">Tokens Claimed Successfully</h3>
             <p className="text-slate-500 text-xs max-w-xs mx-auto leading-relaxed">
-              Cryptographic transaction verified and mined. Your allocation balance has been updated.
+              The transaction was successful. Your claimed tokens have been transferred to your connected wallet.
             </p>
             <button 
               onClick={() => { setClaimStatus('idle'); setSearchQuery(''); setIsVerified(false); setActiveCampaign(null); }} 
               className="pt-2 text-xs text-slate-400 hover:text-slate-200 underline underline-offset-4 decoration-slate-700 cursor-pointer"
             >
-              Run another profile query
+              Go back to dashboard
             </button>
           </div>
         )}

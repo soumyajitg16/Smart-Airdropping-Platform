@@ -14,7 +14,6 @@ export default function WalletModal({ isOpen, onClose }) {
 
   return (
     <>
-      {/* Invisible Full-Screen Backdrop (Blurs the rest of the app) */}
       <div
         className="fixed inset-0 bg-slate-950/20 z-40 transition-all cursor-default animate-fade-in"
         onClick={onClose}

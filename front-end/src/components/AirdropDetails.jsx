@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, ExternalLink, ShieldCheck, AlertTriangle, Calendar, Loader2, RefreshCw } from 'lucide-react';
+import { Copy, ArrowLeft, ExternalLink, ShieldCheck, AlertTriangle, Calendar, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { MERKLE_AIRDROP_ABI } from '../constants/contracts';
 
 export default function AirdropDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { airdrops, wallet } = useApp();
+  const { airdrops, wallet, updateAirdropStatus } = useApp(); // Extracted state modifier
 
   const [refundTxHash, setRefundTxHash] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isRefundComplete, setIsRefundComplete] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const drop = airdrops.find(item => item.id === id);
 
@@ -52,7 +54,7 @@ export default function AirdropDetails() {
 
   const nowSecs = Math.floor(Date.now() / 1000);
   const deadlineSecs = contractDeadline ? Number(contractDeadline) : 0;
-  const isExpired = deadlineSecs > 0 ? nowSecs > deadlineSecs : false;
+  const isExpired = deadlineSecs > 0 && nowSecs > deadlineSecs ? true : false;
 
   const isCreator = 
     contractCreator && 
@@ -74,12 +76,31 @@ export default function AirdropDetails() {
     }
   };
 
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(drop.address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy address', err);
+    }
+  };
+
+  useEffect(() => {
+    if (isExpired) {
+      // Synchronize state globally to localStorage
+      updateAirdropStatus(drop.id, 'Expired');
+    }
+  }, [deadlineSecs]);
+
   useEffect(() => {
     if (isRefundSuccess) {
+      setIsRefundComplete(true);
       setRefundTxHash(null);
-      // We can redirect or update campaign status if needed
+      // Synchronize state globally to localStorage
+      updateAirdropStatus(drop.id, 'Completed');
     }
-  }, [isRefundSuccess]);
+  }, [isRefundSuccess, drop.id]);
 
   const formattedDeadlineDate = deadlineSecs 
     ? new Date(deadlineSecs * 1000).toLocaleString() 
@@ -90,26 +111,26 @@ export default function AirdropDetails() {
       <button 
         onClick={() => navigate('/airdrops')}
         className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 mb-6 transition-colors font-medium uppercase tracking-wider cursor-pointer"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" /> Directory Index
+      > 
+        <ArrowLeft className="h-3.5 w-3.5" /> Back
       </button>
 
       <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-8 shadow-2xl relative">
         <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-slate-800 to-transparent" />
         
-        <div className="flex justify-between items-start mb-4">
+        <div className="flex justify-between items-start mb-2">
           <div>
-            <span className="text-[10px] font-bold text-slate-500 tracking-widest uppercase block mb-1">Campaign Node Entry</span>
+            <span className="text-[10px] font-bold text-slate-500 tracking-widest uppercase block mb-1">Campaign Details</span>
             <h1 className="text-2xl font-semibold tracking-tight text-white">{drop.name}</h1>
           </div>
           <span className={`border px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-            isExpired 
-              ? 'bg-red-500/5 text-red-400 border-red-500/10' 
-              : drop.status === 'Completed'
-                ? 'bg-slate-800/85 text-slate-400 border-slate-700/50'
+            drop.status === 'Completed'
+              ? 'bg-slate-800/85 text-slate-400 border-slate-700/50' 
+              : isExpired && drop.status === 'Expired'
+                ? 'bg-red-500/5 text-red-400 border-red-500/10'
                 : 'bg-emerald-500/5 text-emerald-400 border-emerald-500/10'
           }`}>
-            {isExpired ? 'Expired' : drop.status}
+            {drop.status}
           </span>
         </div>
 
@@ -118,16 +139,27 @@ export default function AirdropDetails() {
         <div className="space-y-3.5 text-xs font-medium mb-8">
           <div className="flex justify-between items-center">
             <span className="text-slate-500">Contract Verification</span>
-            <span className="font-mono text-slate-400 flex items-center gap-1 hover:text-slate-200 cursor-pointer select-all">
-              {drop.address} <ExternalLink className="h-3 w-3 text-slate-600" />
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-slate-400 select-all">{drop.address}</span>
+              <a href={`https://etherscan.io/address/${drop.address}`} target="_blank" rel="noreferrer" className="hover:text-slate-200 transition-colors">
+                <ExternalLink className="h-3 w-3 text-slate-600" />
+              </a>
+              <button 
+                onClick={handleCopy} 
+                className="flex items-center gap-1 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer focus:outline-none"
+                title="Copy Address"
+              >
+                <Copy className="h-3 w-3" />
+                {copied && <span className="text-[10px] text-emerald-400 font-sans">✅</span>}
+              </button>
+            </div>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">Asset Identity Core</span>
+            <span className="text-slate-500">Token Symbol</span>
             <span className="text-slate-300 font-mono">{drop.symbol}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">Global Supply Limit</span>
+            <span className="text-slate-500">Total Distribution</span>
             <span className="text-slate-300">{drop.totalAllocation} {drop.symbol}</span>
           </div>
           <div className="flex justify-between">
@@ -145,12 +177,12 @@ export default function AirdropDetails() {
         </div>
 
         {/* Claim Navigation CTA */}
-        {isPull && !isExpired && (
+        {isPull && !isExpired && drop.status !== 'Completed' && (
           <button 
             onClick={() => navigate(`/claim?address=${drop.address}`)}
             className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/10 active:scale-99 cursor-pointer mb-4"
           >
-            <ShieldCheck className="h-3.5 w-3.5 text-white" /> Redirect to Claim Verification Module
+            <ShieldCheck className="h-3.5 w-3.5 text-white" /> Verify & Claim Airdrop
           </button>
         )}
 
@@ -167,7 +199,7 @@ export default function AirdropDetails() {
               </div>
             </div>
 
-            {isRefundSuccess ? (
+            {isRefundComplete || drop.status === 'Completed' ? (
               <div className="bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 rounded-xl p-3 text-xs flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
                 <span>Tokens swept and refunded successfully to your creator wallet!</span>
@@ -187,12 +219,12 @@ export default function AirdropDetails() {
                   {isRefundPending || isWaitingRefund ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin text-indigo-400" />
-                      <span>Reclaiming Unclaimed Yield...</span>
+                      <span>Reclaiming Unclaimed Tokens...</span>
                     </>
                   ) : (
                     <>
                       <RefreshCw className="h-3.5 w-3.5 text-indigo-400 animate-spin-slow" />
-                      <span>Refund Unclaimed Tokens</span>
+                      <span>Refund Tokens</span>
                     </>
                   )}
                 </button>

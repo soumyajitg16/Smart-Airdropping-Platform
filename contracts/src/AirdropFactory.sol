@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-// cast send 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 "createAndFundAirdrop(address, bytes32, uint256)(address)"
-
 import {Clones} from "../lib/openzeppelin-contracts/contracts/proxy/Clones.sol";
 import {SafeERC20, IERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {MerkleAirdrop} from "./MerkleAirdrop.sol";

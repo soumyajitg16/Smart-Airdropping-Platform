@@ -9,7 +9,7 @@ import {TestToken} from "../src/TestToken.sol";
 import {PushAirdrop} from "../src/PushAirdrop.sol";
 
 //For the Pull model, we need to deploy the implementation contract and the factory contract separately. The factory contract will be used to create new airdrop contracts for each airdrop campaign. The implementation contract will be used as a template for the new airdrop contracts created by the factory.
-contract DeploymentScript is Script {
+contract Deploy is Script {
     function run () external returns (AirdropFactory) {
         // Deployer Account Setup
         uint256 deployerKey = vm.envUint("deployerPrivateKey");
@@ -34,8 +34,7 @@ contract DeploymentScript is Script {
         vm.startBroadcast(creatorKey);
 
         // Token Deployment
-        TestToken testToken = new TestToken ();
-        // testToken.approve(address(airdropFactory), 1000e18);
+        TestToken testToken = new TestToken ("Air Token 1", "AirT-1");
         console.log ("TestToken Contract Address: ", address(testToken));
         vm.stopBroadcast();
 

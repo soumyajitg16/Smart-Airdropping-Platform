@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi';
-import { formatUnits } from 'viem'; // Added to handle modern BigInt formatting safely
+import { formatUnits } from 'viem'; 
 import { injected } from 'wagmi/connectors';
 
 const AppContext = createContext();
@@ -16,7 +16,6 @@ export const AppProvider = ({ children }) => {
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   
-  // Guarded useBalance hook to prevent errors when disconnected
   const { data: balanceData } = useBalance({
     address,
     query: {
@@ -35,12 +34,17 @@ export const AppProvider = ({ children }) => {
     localStorage.setItem('airdrops_data', JSON.stringify(airdrops));
   }, [airdrops]);
 
-  // Modern balance parsing using formatUnits
+  // Global state modifier to update campaign statuses across components
+  const updateAirdropStatus = (id, newStatus) => {
+    setAirdrops((prev) =>
+      prev.map((drop) => (drop.id === id ? { ...drop, status: newStatus } : drop))
+    );
+  };
+
   const rawBalanceFloatString = balanceData 
     ? formatUnits(balanceData.value, balanceData.decimals) 
     : "0";
 
-  // Derived reactive wallet state
   const wallet = {
     isConnected: !!isConnected,
     address: address || null,
@@ -50,15 +54,10 @@ export const AppProvider = ({ children }) => {
       : null,
   };
 
-  // Logs updated cleanly without string interpolation execution errors
-  console.log("Wallet State:", wallet);
-  console.log("Balance using, Wallet State:", wallet.balance);
-  console.log("Balance Data:", balanceData);
-
   const connectWallet = () => {
     if (connectors.length > 0) {
       connect({ connector: connectors[0] });
-      setIsWalletModalOpen(false); // Clean UX: Close modal when initialization begins
+      setIsWalletModalOpen(false);
     }
   };
 
@@ -70,11 +69,12 @@ export const AppProvider = ({ children }) => {
   return (
     <AppContext.Provider value={{
       wallet,
-      balanceData, // Exposed raw balanceData directly from context to prevent staleness
+      balanceData,
       connectWallet,
       disconnectWallet,
       airdrops,
       setAirdrops,
+      updateAirdropStatus, // Exposed globally
       isWalletModalOpen,
       setIsWalletModalOpen
     }}>

@@ -23,7 +23,7 @@ export default function Navbar() {
         {/* Streamlined Text Logo */}
         <div className="cursor-pointer group" onClick={() => navigate('/')}>
           <span className="font-bold text-sm tracking-wider bg-linear-to-r from-slate-100 to-indigo-300 bg-clip-text text-transparent uppercase">
-            Airdrop
+            MULTIDROP
           </span>
         </div>
 
@@ -32,7 +32,7 @@ export default function Navbar() {
           {/* Links Shifted Right */}
           <div className="flex space-x-1 bg-slate-900/40 p-0.5 rounded-xl border border-slate-900 shadow-inner">
             <NavLink to="/" className={navItemStyles}>Home</NavLink>
-            <NavLink to="/airdrops" className={navItemStyles}>Airdrops</NavLink>
+            <NavLink to="/airdrops" className={navItemStyles}>Campaigns</NavLink>
             <NavLink to="/claim" className={navItemStyles}>Claim</NavLink>
           </div>
 
