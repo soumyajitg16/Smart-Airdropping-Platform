@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Script, console2} from "forge-std/Script.sol";
-import {stdJson} from "forge-std/StdJson.sol";
-import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {Script, console2} from "../lib/forge-std/src/Script.sol";
+import {stdJson} from "../lib/forge-std/src/StdJson.sol";
+import {MerkleProof} from "../lib/openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 
 // This works as an alternative to off-chain scripts for generating Merkle roots and proofs. It can be run using `forge script` command. It reads the airdrop list from a JSON file, constructs the Merkle tree, and outputs the Merkle root and proof arrays for each user in the console. This is useful for testing and debugging purposes without needing to rely on external tools or libraries.
 contract GenerateMerkle is Script {
