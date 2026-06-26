@@ -155,8 +155,8 @@ export default function AirdropDetails() {
             </div>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">Token Symbol</span>
-            <span className="text-slate-300 font-mono">{drop.symbol}</span>
+            <span className="text-slate-500">Token Name</span>
+            <span className="text-slate-300 font-mono">{drop.tokenName}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-500">Total Distribution</span>

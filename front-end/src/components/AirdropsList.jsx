@@ -9,8 +9,8 @@ export default function AirdropsList() {
   const navigate = useNavigate();
 
   const filtered = airdrops.filter(drop =>
-    drop.name.toLowerCase().includes(search.toLowerCase()) ||
-    drop.symbol.toLowerCase().includes(search.toLowerCase())
+    (drop.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (drop.symbol || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (

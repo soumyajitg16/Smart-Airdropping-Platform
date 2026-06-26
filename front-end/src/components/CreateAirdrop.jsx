@@ -8,11 +8,47 @@ import { keccak256, encodePacked } from "viem";
 import { ERC20_ABI, FACTORY_ADDRESS, FACTORY_ABI, PUSH_AIRDROP_ADDRESS, PUSH_AIRDROP_ABI, } from "../constants/contracts";
 import { useNavigate } from "react-router-dom";
 
+const getCampaignModeLabel = (mode) =>
+  mode === "pull" ? "Airdrop" : "Multisend";
+
+const formatCampaignName = ({ customName, symbol = "TOKEN", mode, airdrops }) => {
+  const trimmedCustomName = (customName || "").trim();
+  if (trimmedCustomName) return trimmedCustomName;
+
+  const modeLabel = getCampaignModeLabel(mode);
+  const existingCampaignCount = airdrops.filter((drop) => {
+    const sameSymbol = drop.symbol?.toLowerCase() === symbol.toLowerCase();
+    const sameMode =
+      drop.distributionMode === mode ||
+      drop.name?.toLowerCase().includes(modeLabel.toLowerCase());
+
+    return sameSymbol && sameMode;
+  }).length;
+
+  return `${symbol} • ${modeLabel} ${existingCampaignCount + 1}`;
+};
+
+const formatTransactionError = ({ err, fallback, wallet, to }) => {
+  const message = err?.shortMessage || err?.message || "";
+  const isUserRejected = /user rejected|user denied|denied transaction signature/i.test(
+    message,
+  );
+
+  if (!isUserRejected) return message || fallback;
+
+  const chain = wallet.chainId
+    ? `${wallet.network || "Unknown"} (id: ${wallet.chainId})`
+    : wallet.network || "Unknown";
+
+  return `User rejected the request. Request Arguments: chain: ${chain} from: ${wallet.address} to: ${to}`;
+};
+
 export default function CreateAirdrop() {
   const { wallet, connectWallet, setAirdrops, airdrops } = useApp();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [distributionMode, setDistributionMode] = useState("pull");
+  const [campaignName, setCampaignName] = useState("");
   const [tokenAddress, setTokenAddress] = useState("");
   const [recipients, setRecipients] = useState("");
   const [durationDays, setDurationDays] = useState("7");
@@ -37,6 +73,8 @@ export default function CreateAirdrop() {
   const [isPushCompleted, setIsPushCompleted] = useState(false);
 
   const fileInputRef = useRef(null);
+  const campaignNameRef = useRef(campaignName);
+  const airdropsRef = useRef(airdrops);
 
   const isValidTokenAddress = isAddress(tokenAddress);
 
@@ -48,17 +86,17 @@ export default function CreateAirdrop() {
     query: { enabled: isValidTokenAddress },
   });
 
-  const { data: tokenName } = useReadContract({
-    address: isValidTokenAddress ? tokenAddress : undefined,
-    abi: ERC20_ABI,
-    functionName: "name",
-    query: { enabled: isValidTokenAddress },
-  });
-
   const { data: tokenSymbol } = useReadContract({
     address: isValidTokenAddress ? tokenAddress : undefined,
     abi: ERC20_ABI,
     functionName: "symbol",
+    query: { enabled: isValidTokenAddress },
+  });
+
+  const { data: tokenName } = useReadContract({
+    address: isValidTokenAddress ? tokenAddress : undefined,
+    abi: ERC20_ABI,
+    functionName: "name",
     query: { enabled: isValidTokenAddress },
   });
 
@@ -106,6 +144,18 @@ export default function CreateAirdrop() {
     });
 
   const decimals = tokenDecimals || 18;
+
+  const defaultCampaignName = formatCampaignName({
+    customName: "",
+    symbol: tokenSymbol || "TOKEN",
+    mode: distributionMode,
+    airdrops,
+  });
+
+  useEffect(() => {
+    campaignNameRef.current = campaignName;
+    airdropsRef.current = airdrops;
+  }, [campaignName, airdrops]);
 
   // --- CSV PARSING UTILITY ---
   const parseCSVToFormat = (text) => {
@@ -267,13 +317,20 @@ export default function CreateAirdrop() {
 
       const newDrop = {
         id: Date.now().toString(),
-        name: `${tokenName} Campaign (Airdrop)`,
+        name: formatCampaignName({
+          customName: campaignNameRef.current,
+          symbol: tokenSymbol || "TOKEN",
+          mode: "pull",
+          airdrops: airdropsRef.current,
+        }),
+        tokenName,
         symbol: tokenSymbol || "TOKEN",
         address: targetClone,
         totalAllocation: formattedTotal,
         status: "Active",
         reward: "Merkle Claim", // Will delete later on
         description: `Cryptographic Merkle pull-based claim for ${parsedEntries.length} verified addresses.`,
+        distributionMode: "pull",
         tokenAddress: tokenAddress,
         merkleRoot: root,
         recipients: parsedEntries.map((e) => ({
@@ -302,13 +359,20 @@ export default function CreateAirdrop() {
         // All batches completed atomically
         const newDrop = {
           id: Date.now().toString(),
-          name: `${tokenName} Campaign (Multisend)`,
+          name: formatCampaignName({
+            customName: campaignNameRef.current,
+            symbol: tokenSymbol || "TOKEN",
+            mode: "push",
+            airdrops: airdropsRef.current,
+          }),
+          tokenName,
           symbol: tokenSymbol || "TOKEN",
           address: PUSH_AIRDROP_ADDRESS,
           totalAllocation: formattedTotal,
           status: "Completed",
           reward: "Batch Multi-Send", // Will delete later on
           description: `Direct batch multi-send distribution complete for ${parsedEntries.length} addresses.`,
+          distributionMode: "push",
           tokenAddress: tokenAddress,
           recipients: parsedEntries.map((e) => ({
             address: e.address,
@@ -376,7 +440,14 @@ export default function CreateAirdrop() {
       });
       setApproveTxHash(hash);
     } catch (err) {
-      setErrorMsg(err.message || "Approval transaction rejected.");
+      setErrorMsg(
+        formatTransactionError({
+          err,
+          fallback: "Approval transaction rejected.",
+          wallet,
+          to: tokenAddress,
+        }),
+      );
     }
   };
 
@@ -421,12 +492,20 @@ export default function CreateAirdrop() {
         setBatchTxHash(hash);
       }
     } catch (err) {
-      setErrorMsg(err.message || "Deployment transaction rejected.");
+      setErrorMsg(
+        formatTransactionError({
+          err,
+          fallback: "Deployment transaction rejected.",
+          wallet,
+          to: distributionMode === "pull" ? FACTORY_ADDRESS : PUSH_AIRDROP_ADDRESS,
+        }),
+      );
     }
   };
 
   const finalizeAirdrop = () => {
     setStep(1);
+    setCampaignName("");
     setTokenAddress("");
     setRecipients("");
     setDeployedCloneAddress("");
@@ -547,6 +626,25 @@ export default function CreateAirdrop() {
                   value={tokenAddress}
                   onChange={(e) => setTokenAddress(e.target.value)}
                   className="w-full bg-slate-950/60 border border-slate-900 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 outline-none rounded-xl px-4 py-2.5 text-slate-200 font-mono text-sm transition-all placeholder:text-slate-800"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-xs font-semibold text-slate-300 tracking-wide">
+                    Campaign Name
+                  </label>
+                  <span className="text-[10px] text-slate-500 truncate max-w-56">
+                    Default: {defaultCampaignName}
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  maxLength={80}
+                  placeholder={defaultCampaignName}
+                  value={campaignName}
+                  onChange={(e) => setCampaignName(e.target.value)}
+                  className="w-full bg-slate-950/60 border border-slate-900 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 outline-none rounded-xl px-4 py-2.5 text-slate-200 text-sm transition-all placeholder:text-slate-700"
                 />
               </div>
 

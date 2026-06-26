@@ -6,9 +6,9 @@ import { injected } from 'wagmi/connectors';
 const AppContext = createContext();
 
 const initialAirdrops = [
-  { id: '1', name: 'Alpha Token', symbol: 'ALP', address: '0x71C9991A23a92', totalAllocation: '500,000', status: 'Active', reward: '100 ALPHA', description: 'Governance token distribution for early ecosystem liquidity providers.' },
-  { id: '2', name: 'Nebula Layer', symbol: 'NBL', address: '0x3A21115bF144', totalAllocation: '1,200,000', status: 'Active', reward: '250 NBL', description: 'Community allocation pool for Layer-2 testnet validators.' },
-  { id: '3', name: 'Zenith Finance', symbol: 'ZEN', address: '0xF8d22244e299', totalAllocation: '250,000', status: 'Completed', reward: '50 ZEN', description: 'Retrospective rewards for alpha platform traders.' },
+  { id: '1', name: 'ALP Governance Token Distribution', tokenName: 'Alpha Token', symbol: 'ALP', address: '0x71C9991A23a92', totalAllocation: '500,000', status: 'Active', reward: '100 ALPHA', description: 'Governance token distribution for early ecosystem liquidity providers.' },
+  { id: '2', name: 'NBL Validator Rewards', tokenName: 'Nebula Layer', symbol: 'NBL', address: '0x3A21115bF144', totalAllocation: '1,200,000', status: 'Active', reward: '250 NBL', description: 'Community allocation pool for Layer-2 testnet validators.' },
+  { id: '3', name: 'ZEN Platform Rewards', tokenName: 'Zenith Finance', symbol: 'ZEN', address: '0xF8d22244e299', totalAllocation: '250,000', status: 'Completed', reward: '50 ZEN', description: 'Retrospective rewards for alpha platform traders.' },
 ];
 
 export const AppProvider = ({ children }) => {
