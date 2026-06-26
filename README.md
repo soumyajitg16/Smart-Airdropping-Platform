@@ -1,4 +1,4 @@
-# Multidrop Airdrop dApp
+# Multidrop dApp
 
 Multidrop is a full-stack token distribution dApp for creating ERC-20 airdrop campaigns. It supports both pull-based Merkle airdrops, where eligible recipients claim their allocation, and push-based multisend distributions, where a creator sends tokens directly to recipients in batches.
 
