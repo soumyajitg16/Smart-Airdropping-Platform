@@ -1,20 +1,16 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi';
 import { formatUnits } from 'viem'; 
-import { injected } from 'wagmi/connectors';
+import { loadCampaigns, saveCampaigns } from '../services/campaignStore';
 
 const AppContext = createContext();
-
-const initialAirdrops = [
-  { id: '1', name: 'ALP Governance Token Distribution', tokenName: 'Alpha Token', symbol: 'ALP', address: '0x71C9991A23a92', totalAllocation: '500,000', status: 'Active', reward: '100 ALPHA', description: 'Governance token distribution for early ecosystem liquidity providers.' },
-  { id: '2', name: 'NBL Validator Rewards', tokenName: 'Nebula Layer', symbol: 'NBL', address: '0x3A21115bF144', totalAllocation: '1,200,000', status: 'Active', reward: '250 NBL', description: 'Community allocation pool for Layer-2 testnet validators.' },
-  { id: '3', name: 'ZEN Platform Rewards', tokenName: 'Zenith Finance', symbol: 'ZEN', address: '0xF8d22244e299', totalAllocation: '250,000', status: 'Completed', reward: '50 ZEN', description: 'Retrospective rewards for alpha platform traders.' },
-];
 
 export const AppProvider = ({ children }) => {
   const { address, isConnected, chain } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
+  const hasHydratedCampaigns = useRef(false);
+  const latestPersistRequestId = useRef(0);
   
   const { data: balanceData } = useBalance({
     address,
@@ -23,15 +19,51 @@ export const AppProvider = ({ children }) => {
     }
   });
 
-  const [airdrops, setAirdrops] = useState(() => {
-    const saved = localStorage.getItem('airdrops_data');
-    return saved ? JSON.parse(saved) : initialAirdrops;
-  });
+  const [airdrops, setAirdrops] = useState([]);
+  const [campaignStorageStatus, setCampaignStorageStatus] = useState('loading');
   
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('airdrops_data', JSON.stringify(airdrops));
+    let isMounted = true;
+
+    loadCampaigns()
+      .then(({ campaigns, source }) => {
+        if (!isMounted) return;
+        setAirdrops(campaigns);
+        setCampaignStorageStatus(source);
+        hasHydratedCampaigns.current = true;
+      })
+      .catch((err) => {
+        console.warn('Unable to hydrate campaigns.', err);
+        if (!isMounted) return;
+        setCampaignStorageStatus('session');
+        hasHydratedCampaigns.current = true;
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydratedCampaigns.current) return;
+
+    const requestId = latestPersistRequestId.current + 1;
+    latestPersistRequestId.current = requestId;
+
+    saveCampaigns(airdrops)
+      .then(() => {
+        if (latestPersistRequestId.current === requestId) {
+          setCampaignStorageStatus('mongodb');
+        }
+      })
+      .catch((err) => {
+        console.warn('Unable to sync campaigns to MongoDB.', err);
+        if (latestPersistRequestId.current === requestId) {
+          setCampaignStorageStatus('session');
+        }
+      });
   }, [airdrops]);
 
   // Global state modifier to update campaign statuses across components
@@ -75,6 +107,7 @@ export const AppProvider = ({ children }) => {
       airdrops,
       setAirdrops,
       updateAirdropStatus, // Exposed globally
+      campaignStorageStatus,
       isWalletModalOpen,
       setIsWalletModalOpen
     }}>

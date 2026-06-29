@@ -1,16 +1,61 @@
-# React + Vite
+# Multidrop Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the React/Vite frontend for the Multidrop airdrop dApp.
 
-Currently, two official plugins are available:
+## Campaign Storage
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Campaign details are stored permanently in MongoDB through the local API server in `front-end/server/`.
 
-## React Compiler
+The browser does not use permanent `localStorage` for campaigns. It only keeps a temporary `sessionStorage` cache for the current browser session.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Setup
 
-## Expanding the ESLint configuration
+Create `front-end/.env` from `.env.example`:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```text
+MONGODB_URI=mongodb://127.0.0.1:27017
+MONGODB_DB_NAME=multidrop
+MONGODB_CAMPAIGNS_COLLECTION=campaigns
+API_PORT=5050
+CORS_ORIGIN=http://localhost:5173
+VITE_API_PROXY_TARGET=http://localhost:5050
+VITE_CAMPAIGNS_API_URL=/api/campaigns
+```
+
+Start the API:
+
+```shell
+npm run api
+```
+
+The API creates `multidrop -> campaigns` on startup if it does not already exist.
+
+Start the frontend in another terminal:
+
+```shell
+npm run dev
+```
+
+## VS Code MongoDB Extension
+
+Use the same `MONGODB_URI` value in the MongoDB extension connection dialog.
+
+After connecting, open:
+
+```text
+multidrop -> campaigns
+```
+
+Run `npm run api` and refresh this collection. It should exist even when it has no campaign documents yet.
+
+Create a campaign in the app and refresh this collection again to confirm the complete campaign document was saved.
+
+## Dummy Campaign Data
+
+Sample documents are available at:
+
+```text
+front-end/server/seed/dummyCampaigns.json
+```
+
+Insert these documents into `multidrop.campaigns` with the MongoDB extension. After inserting them, refresh the app and open `/airdrops`; the campaigns should show without connecting a wallet.

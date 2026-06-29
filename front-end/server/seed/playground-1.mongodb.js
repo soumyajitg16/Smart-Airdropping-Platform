@@ -1,0 +1,117 @@
+// MongoDB Playground
+// Use Ctrl+Space inside a snippet or a string literal to trigger completions.
+
+// The current database to use.
+use('multidrop');
+
+// Create a new document in the collection.
+db.getCollection('campaigns').insertMany([
+  {
+    "_id": "airdrop-alp-001",
+    "id": "airdrop-alp-001",
+    "name": "ALP Early Supporter Drop",
+    "tokenName": "Alpha Token",
+    "symbol": "ALP",
+    "address": "0x1111111111111111111111111111111111111111",
+    "totalAllocation": "500,000",
+    "status": "Active",
+    "reward": "Airdrop",
+    "description": "Demo campaign for early ecosystem supporters and liquidity providers.",
+    "distributionMode": "pull",
+    "tokenAddress": "0x2222222222222222222222222222222222222222",
+    "recipients": [
+      {
+        "address": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+        "amount": "100000000000000000000"
+      },
+      {
+        "address": "0x8ba1f109551bD432803012645Ac136ddd64DBA72",
+        "amount": "250000000000000000000"
+      }
+    ],
+    "decimals": 18,
+    "sortIndex": 0,
+    "createdAt": "2026-06-01T09:30:00.000Z"
+  },
+  {
+    "_id": "airdrop-nbl-002",
+    "id": "airdrop-nbl-002",
+    "name": "NBL Validator Rewards",
+    "tokenName": "Nebula Layer",
+    "symbol": "NBL",
+    "address": "0x3333333333333333333333333333333333333333",
+    "totalAllocation": "1,200,000",
+    "status": "Active",
+    "reward": "Airdrop",
+    "description": "Demo validator allocation for testnet operators and infrastructure contributors.",
+    "distributionMode": "pull",
+    "tokenAddress": "0x4444444444444444444444444444444444444444",
+    "recipients": [
+      {
+        "address": "0x90f8bf6A479f320eAd074411a4B0e7944Ea8c9C1",
+        "amount": "250000000000000000000"
+      },
+      {
+        "address": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+        "amount": "500000000000000000000"
+      }
+    ],
+    "decimals": 18,
+    "sortIndex": 1,
+    "createdAt": "2026-06-05T11:00:00.000Z"
+  },
+  {
+    "_id": "airdrop-zen-003",
+    "id": "airdrop-zen-003",
+    "name": "ZEN Platform Rewards",
+    "tokenName": "Zenith Finance",
+    "symbol": "ZEN",
+    "address": "0x5555555555555555555555555555555555555555",
+    "totalAllocation": "250,000",
+    "status": "Completed",
+    "reward": "Airdrop",
+    "description": "Demo retrospective rewards for alpha platform traders.",
+    "distributionMode": "pull",
+    "tokenAddress": "0x6666666666666666666666666666666666666666",
+    "recipients": [
+      {
+        "address": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+        "amount": "50000000000000000000"
+      },
+      {
+        "address": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
+        "amount": "125000000000000000000"
+      }
+    ],
+    "decimals": 18,
+    "sortIndex": 2,
+    "createdAt": "2026-05-18T14:15:00.000Z"
+  },
+  {
+    "_id": "airdrop-orb-004",
+    "id": "airdrop-orb-004",
+    "name": "ORB Community Multisend",
+    "tokenName": "Orbit Credits",
+    "symbol": "ORB",
+    "address": "0x7777777777777777777777777777777777777777",
+    "totalAllocation": "80,000",
+    "status": "Completed",
+    "reward": "Multisend",
+    "description": "Demo push-style multisend distribution for community quest participants.",
+    "distributionMode": "push",
+    "tokenAddress": "0x8888888888888888888888888888888888888888",
+    "recipients": [
+      {
+        "address": "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955",
+        "amount": "80000000000000000000"
+      },
+      {
+        "address": "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f",
+        "amount": "160000000000000000000"
+      }
+    ],
+    "decimals": 18,
+    "sortIndex": 3,
+    "createdAt": "2026-05-10T08:45:00.000Z"
+  }
+]);

@@ -328,7 +328,7 @@ export default function CreateAirdrop() {
         address: targetClone,
         totalAllocation: formattedTotal,
         status: "Active",
-        reward: "Merkle Claim", // Will delete later on
+        reward: "Airdrop", // Will delete later on
         description: `Cryptographic Merkle pull-based claim for ${parsedEntries.length} verified addresses.`,
         distributionMode: "pull",
         tokenAddress: tokenAddress,
@@ -370,8 +370,8 @@ export default function CreateAirdrop() {
           address: PUSH_AIRDROP_ADDRESS,
           totalAllocation: formattedTotal,
           status: "Completed",
-          reward: "Batch Multi-Send", // Will delete later on
-          description: `Direct batch multi-send distribution complete for ${parsedEntries.length} addresses.`,
+          reward: "Multisend", // Will delete later on
+          description: `Direct batch multisend distribution complete for ${parsedEntries.length} addresses.`,
           distributionMode: "push",
           tokenAddress: tokenAddress,
           recipients: parsedEntries.map((e) => ({
@@ -1003,7 +1003,7 @@ export default function CreateAirdrop() {
                 <div className="space-y-5 max-w-md mx-auto">
                   <div>
                     <h3 className="text-lg font-semibold text-slate-100">
-                      Direct Batch Multi-Send
+                      Direct Batch Multisend
                     </h3>
                     <p className="text-slate-400 text-xs mt-1">
                       Sequential batch queue: {pushBatches.length} transactions
@@ -1081,7 +1081,7 @@ export default function CreateAirdrop() {
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span>
-                          Executing Batch Multi-Send #{currentBatchIndex + 1}...
+                          Executing Batch Multisend #{currentBatchIndex + 1}...
                         </span>
                       </>
                     ) : (

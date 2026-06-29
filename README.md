@@ -12,7 +12,8 @@ The project is split into a Foundry smart-contract workspace and a React/Vite fr
 - Refund unclaimed tokens to the campaign creator after the deadline.
 - Send push-style token distributions through a batch multisend contract.
 - Connect wallets with wagmi and viem.
-- Store local campaign metadata in the browser for development workflows.
+- Persist complete campaign metadata through a MongoDB-backed API.
+- Keep only a temporary browser session cache for the current tab/session.
 
 ## Project Structure
 
@@ -40,6 +41,8 @@ Important files:
 flowchart LR
   Creator["Creator Wallet"] --> UI["React Frontend"]
   Recipient["Recipient Wallet"] --> UI
+  UI --> API["Campaign API"]
+  API --> MongoDB["MongoDB"]
   UI --> Wagmi["wagmi + viem"]
   Wagmi --> Factory["AirdropFactory"]
   Wagmi --> Push["PushAirdrop"]
@@ -113,6 +116,7 @@ npm install
 ```git-bash/zsh
 cd contracts
 forge install
+```
 
 ### 3. Build and test contracts
 
@@ -161,12 +165,46 @@ npm run dev
 
 Open the Vite URL in your browser and connect a wallet on the Anvil network.
 
+### 7. Start the campaign API
+
+Create `front-end/.env` from `front-end/.env.example`, then set `MONGODB_URI` to your local or Atlas connection string.
+
+Run the API in a separate terminal from `front-end/`:
+
+```shell
+npm run api
+```
+
+When the API starts, it creates the `multidrop.campaigns` collection if it does not exist yet. When the frontend starts, it reads campaigns from MongoDB through this API. New campaigns and status updates are saved back to MongoDB. The browser only keeps a `sessionStorage` cache for the current browser session, and the app removes the old permanent `localStorage` campaign key from previous versions.
+
+### 8. Use the VS Code MongoDB extension
+
+The VS Code MongoDB extension helps you inspect the database, but it does not replace the API server.
+
+1. Open the MongoDB extension in VS Code.
+2. Add a connection using the same value as `MONGODB_URI`, for example `mongodb://127.0.0.1:27017`.
+3. After connecting, open the `multidrop` database.
+4. Open the `campaigns` collection.
+5. Run `npm run api`, then refresh the MongoDB extension. The `campaigns` collection should exist even before a campaign is created.
+6. Create a campaign in the app, then refresh the collection in VS Code to see the saved document.
+
+To manually add sample campaigns, use the documents in:
+
+```text
+front-end/server/seed/dummyCampaigns.json
+```
+
+You can insert them into `multidrop.campaigns` with the MongoDB extension import/insert-many flow. After inserting, refresh the app or open `/airdrops`; the campaigns should appear without connecting a wallet.
+
+If the extension cannot connect, MongoDB itself is probably not running locally, or your Atlas connection string is wrong. If the extension connects but the app does not save, check that `npm run api` is running and that `front-end/.env` has the same `MONGODB_URI`.
+
 ## Frontend Scripts
 
 Run these from `front-end/`:
 
 ```shell
 npm run dev
+npm run api
 npm run build
 npm run lint
 npm run preview
@@ -196,6 +234,25 @@ These are Anvil-style addresses and should be updated after a fresh local deploy
 
 The wagmi config includes placeholder RPC URLs for mainnet and Sepolia. Replace them with real provider URLs before using public networks.
 
+Campaign metadata is stored by the API in MongoDB using these frontend `.env` values:
+
+```text
+MONGODB_URI=mongodb://127.0.0.1:27017
+MONGODB_DB_NAME=multidrop
+MONGODB_CAMPAIGNS_COLLECTION=campaigns
+API_PORT=5050
+CORS_ORIGIN=http://localhost:5173
+VITE_API_PROXY_TARGET=http://localhost:5050
+VITE_CAMPAIGNS_API_URL=/api/campaigns
+```
+
+Storage behavior:
+
+- MongoDB is the source of truth for campaign data.
+- Browser `sessionStorage` is only a temporary cache for the current browser session.
+- Browser `localStorage` is not used for campaign persistence.
+- The old `airdrops_data` localStorage key is removed automatically when the app starts.
+
 ## Airdrop List Format
 
 Merkle generation scripts expect `contracts/airdrop_list.json` to use this structure:
@@ -215,7 +272,7 @@ Amounts should be token base units, for example `1000000000000000000` for `1` to
 
 ## Known Limitations
 
-- Campaign metadata is currently stored in browser `localStorage`.
+- Campaign metadata requires the MongoDB API for permanent persistence. If the API is offline, the frontend can only keep temporary in-session data.
 - Claiming from the frontend requires the original recipient list to reconstruct proofs.
 - Mainnet and Sepolia RPC values are placeholders.
 - `PushAirdrop` limits each transaction to 10 recipients for testing-oriented batching.

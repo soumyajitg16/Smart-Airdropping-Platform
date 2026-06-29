@@ -26,7 +26,7 @@ export default function AirdropDetails() {
     );
   }
 
-  const isPull = drop.reward === 'Merkle Claim';
+  const isPull = drop.reward === 'Airdrop';
 
   // --- WAGMI READ CONTRACTS ---
   // Read campaign creator address
@@ -88,7 +88,7 @@ export default function AirdropDetails() {
 
   useEffect(() => {
     if (isExpired) {
-      // Synchronize state globally to localStorage
+      // Synchronize state globally to MongoDB through AppContext.
       updateAirdropStatus(drop.id, 'Expired');
     }
   }, [deadlineSecs]);
@@ -97,7 +97,7 @@ export default function AirdropDetails() {
     if (isRefundSuccess) {
       setIsRefundComplete(true);
       setRefundTxHash(null);
-      // Synchronize state globally to localStorage
+      // Synchronize state globally to MongoDB through AppContext.
       updateAirdropStatus(drop.id, 'Completed');
     }
   }, [isRefundSuccess, drop.id]);
@@ -163,7 +163,7 @@ export default function AirdropDetails() {
             <span className="text-slate-300">{drop.totalAllocation} {drop.symbol}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">Individual Standard Drop</span>
+            <span className="text-slate-500">Campaign Type</span>
             <span className="text-indigo-400 font-semibold">{drop.reward}</span>
           </div>
           {isPull && deadlineSecs > 0 && (
