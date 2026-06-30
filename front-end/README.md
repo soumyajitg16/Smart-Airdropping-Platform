@@ -8,6 +8,8 @@ Campaign details are stored permanently in MongoDB through the local API server 
 
 The browser does not use permanent `localStorage` for campaigns. It only keeps a temporary `sessionStorage` cache for the current browser session.
 
+The `/airdrops` page reads campaigns from MongoDB without requiring wallet connection and shows an `Airdrop` or `Multisend` flag for each campaign.
+
 ## Setup
 
 Create `front-end/.env` from `.env.example`:

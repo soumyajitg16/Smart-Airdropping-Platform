@@ -14,6 +14,7 @@ The project is split into a Foundry smart-contract workspace and a React/Vite fr
 - Connect wallets with wagmi and viem.
 - Persist complete campaign metadata through a MongoDB-backed API.
 - Keep only a temporary browser session cache for the current tab/session.
+- Show an Airdrop or Multisend flag on each campaign in the distribution list.
 
 ## Project Structure
 
