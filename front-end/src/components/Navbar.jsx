@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../hooks/useApp';
 import { Wallet } from 'lucide-react';
 import WalletModal from './WalletModal';
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../hooks/useApp';
 import { Search, ArrowUpRight, Gift, Send } from 'lucide-react';
 
 const getCampaignKind = (drop) => {
@@ -29,6 +29,7 @@ export default function AirdropsList() {
   const navigate = useNavigate();
   const hasSearchQuery = search.trim().length > 0;
   const isLoadingCampaigns = campaignStorageStatus === 'loading';
+  const hasStorageError = campaignStorageStatus === 'error';
 
   const filtered = airdrops.filter(drop =>
     (drop.name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -37,9 +38,11 @@ export default function AirdropsList() {
 
   const emptyMessage = isLoadingCampaigns
     ? 'Loading campaigns from MongoDB...'
-    : hasSearchQuery
-      ? 'No campaigns match query terms.'
-      : 'No campaigns found in MongoDB yet.';
+    : hasStorageError
+      ? 'Unable to load campaigns from MongoDB.'
+      : hasSearchQuery
+        ? 'No campaigns match query terms.'
+        : 'No campaigns found in MongoDB yet.';
 
   return (
     <div className="max-w-3xl mx-auto mt-16 px-4 text-white animate-fade-in">

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useApp } from "../context/AppContext";
+import { useApp } from "../hooks/useApp";
 import { HelpCircle, ChevronRight, CheckCircle2, ArrowRight, Upload, AlertTriangle, Loader2, Info, } from "lucide-react";
 import { isAddress, parseUnits, formatUnits, decodeEventLog } from "viem";
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt, } from "wagmi";

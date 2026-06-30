@@ -1,6 +1,6 @@
 import React from 'react';
 import { LogOut, Activity, Coins } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../hooks/useApp';
 
 export default function WalletModal({ isOpen, onClose }) {
   const { disconnectWallet, wallet, balanceData } = useApp();

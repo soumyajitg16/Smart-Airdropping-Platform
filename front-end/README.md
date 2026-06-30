@@ -6,7 +6,7 @@ This is the React/Vite frontend for the Multidrop airdrop dApp.
 
 Campaign details are stored permanently in MongoDB through the local API server in `front-end/server/`.
 
-The browser does not use permanent `localStorage` for campaigns. It only keeps a temporary `sessionStorage` cache for the current browser session.
+The browser does not use `localStorage` or `sessionStorage` for campaign persistence.
 
 The `/airdrops` page reads campaigns from MongoDB without requiring wallet connection and shows an `Airdrop` or `Multisend` flag for each campaign.
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'; // 1. Added useRef
-import { useApp } from '../context/AppContext';
+import { useApp } from '../hooks/useApp';
 import { Search, UserCheck, Sparkles, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { isAddress, formatUnits, keccak256, encodePacked } from 'viem';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';

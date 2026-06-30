@@ -13,7 +13,6 @@ The project is split into a Foundry smart-contract workspace and a React/Vite fr
 - Send push-style token distributions through a batch multisend contract.
 - Connect wallets with wagmi and viem.
 - Persist complete campaign metadata through a MongoDB-backed API.
-- Keep only a temporary browser session cache for the current tab/session.
 - Show an Airdrop or Multisend flag on each campaign in the distribution list.
 
 ## Project Structure
@@ -176,7 +175,7 @@ Run the API in a separate terminal from `front-end/`:
 npm run api
 ```
 
-When the API starts, it creates the `multidrop.campaigns` collection if it does not exist yet. When the frontend starts, it reads campaigns from MongoDB through this API. New campaigns and status updates are saved back to MongoDB. The browser only keeps a `sessionStorage` cache for the current browser session, and the app removes the old permanent `localStorage` campaign key from previous versions.
+When the API starts, it creates the `multidrop.campaigns` collection if it does not exist yet. When the frontend starts, it reads campaigns from MongoDB through this API. New campaigns and status updates are saved back to MongoDB.
 
 ### 8. Use the VS Code MongoDB extension
 
@@ -249,10 +248,9 @@ VITE_CAMPAIGNS_API_URL=/api/campaigns
 
 Storage behavior:
 
-- MongoDB is the source of truth for campaign data.
-- Browser `sessionStorage` is only a temporary cache for the current browser session.
-- Browser `localStorage` is not used for campaign persistence.
-- The old `airdrops_data` localStorage key is removed automatically when the app starts.
+- MongoDB is the only source of truth for campaign data.
+- Browser `sessionStorage` and `localStorage` are not used for campaign persistence.
+- If the API is offline, campaigns cannot be loaded or saved permanently.
 
 ## Airdrop List Format
 
@@ -273,7 +271,7 @@ Amounts should be token base units, for example `1000000000000000000` for `1` to
 
 ## Known Limitations
 
-- Campaign metadata requires the MongoDB API for permanent persistence. If the API is offline, the frontend can only keep temporary in-session data.
+- Campaign metadata requires the MongoDB API for loading and saving.
 - Claiming from the frontend requires the original recipient list to reconstruct proofs.
 - Mainnet and Sepolia RPC values are placeholders.
 - `PushAirdrop` limits each transaction to 10 recipients for testing-oriented batching.

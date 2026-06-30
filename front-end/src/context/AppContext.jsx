@@ -1,9 +1,8 @@
-import { createContext, useState, useContext, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi';
 import { formatUnits } from 'viem'; 
 import { loadCampaigns, saveCampaigns } from '../services/campaignStore';
-
-const AppContext = createContext();
+import { AppContext } from './AppContextBase';
 
 export const AppProvider = ({ children }) => {
   const { address, isConnected, chain } = useAccount();
@@ -37,7 +36,7 @@ export const AppProvider = ({ children }) => {
       .catch((err) => {
         console.warn('Unable to hydrate campaigns.', err);
         if (!isMounted) return;
-        setCampaignStorageStatus('session');
+        setCampaignStorageStatus('error');
         hasHydratedCampaigns.current = true;
       });
 
@@ -61,7 +60,7 @@ export const AppProvider = ({ children }) => {
       .catch((err) => {
         console.warn('Unable to sync campaigns to MongoDB.', err);
         if (latestPersistRequestId.current === requestId) {
-          setCampaignStorageStatus('session');
+          setCampaignStorageStatus('error');
         }
       });
   }, [airdrops]);
@@ -115,5 +114,3 @@ export const AppProvider = ({ children }) => {
     </AppContext.Provider>
   );
 };
-
-export const useApp = () => useContext(AppContext);

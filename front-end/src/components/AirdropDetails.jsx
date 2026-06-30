@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../hooks/useApp';
 import { Copy, ArrowLeft, ExternalLink, ShieldCheck, AlertTriangle, Calendar, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { MERKLE_AIRDROP_ABI } from '../constants/contracts';
