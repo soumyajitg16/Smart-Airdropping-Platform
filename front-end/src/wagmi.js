@@ -1,17 +1,21 @@
 import { http, createConfig } from 'wagmi';
-import { mainnet, sepolia, anvil } from 'wagmi/chains'; // 1. FIX: Imported 'anvil' in lowercase
+import { mainnet, polygonAmoy, anvil } from 'wagmi/chains';
 import { injected } from 'wagmi/connectors';
 
+const transport = (url) => (url ? http(url) : http());
+const includeAnvil =
+  import.meta.env.DEV || import.meta.env.VITE_ENABLE_ANVIL === 'true';
+
+const chains = includeAnvil ? [anvil, polygonAmoy, mainnet] : [polygonAmoy, mainnet];
+
 export const config = createConfig({
-  // 2. FIX: Changed 'anvil' to 'anvil' here
-  chains: [anvil, mainnet, sepolia], 
+  chains,
   connectors: [
     injected() 
   ],
   transports: {
-    // 3. FIX: Linked the transport object properties correctly
-    [anvil.id]: http('http://127.0.0.1:8545'),
-    [mainnet.id]: http('https://alchemy.com'), 
-    [sepolia.id]: http('https://sepolia.org'),
+    [anvil.id]: transport(import.meta.env.VITE_ANVIL_RPC_URL || 'http://127.0.0.1:8545'),
+    [polygonAmoy.id]: transport(import.meta.env.VITE_AMOY_RPC_URL),
+    [mainnet.id]: transport(import.meta.env.VITE_MAINNET_RPC_URL),
   },
 });

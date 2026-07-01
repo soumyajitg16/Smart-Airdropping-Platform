@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'; // 1. Added useRef
-import { useApp } from '../context/AppContext';
+import { useApp } from '../hooks/useApp';
 import { Search, UserCheck, Sparkles, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
-import { isAddress, formatUnits, keccak256, encodePacked } from 'viem';
+import { isAddress, formatUnits } from 'viem';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { MerkleTree } from 'merkletreejs';
 import { MERKLE_AIRDROP_ABI } from '../constants/contracts';
 import { useSearchParams } from 'react-router-dom'; // 2. Added useSearchParams
+import { getMerkleProof } from '../utils/merkle';
 
 export default function ClaimToken() {
   const { wallet, connectWallet, airdrops } = useApp();
@@ -146,13 +146,11 @@ export default function ClaimToken() {
     if (!activeCampaign || !wallet.address) return;
 
     try {
-      // Reconstruct Merkle Tree
-      const leaves = activeCampaign.recipients.map(r => 
-        keccak256(encodePacked(['address', 'uint256'], [r.address, BigInt(r.amount)]))
-      );
-      const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
-      const leaf = keccak256(encodePacked(['address', 'uint256'], [wallet.address, claimantAmountWei]));
-      const proof = tree.getHexProof(leaf);
+      const proof = getMerkleProof({
+        recipients: activeCampaign.recipients,
+        address: wallet.address,
+        amountWei: claimantAmountWei,
+      });
 
       const hash = await executeClaim({
         address: activeCampaign.address,

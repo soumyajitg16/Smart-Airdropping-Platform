@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: multidrop-api
+    runtime: node
+    rootDir: front-end
+    buildCommand: npm ci
+    startCommand: npm run api
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: multidrop
+      - key: MONGODB_CAMPAIGNS_COLLECTION
+        value: campaigns
+      - key: CORS_ORIGIN
+        sync: false

@@ -1,47 +1,19 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useApp } from "../context/AppContext";
+import { useApp } from "../hooks/useApp";
 import { HelpCircle, ChevronRight, CheckCircle2, ArrowRight, Upload, AlertTriangle, Loader2, Info, } from "lucide-react";
-import { isAddress, parseUnits, formatUnits, decodeEventLog } from "viem";
+import { isAddress, formatUnits, decodeEventLog } from "viem";
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt, } from "wagmi";
-import { MerkleTree } from "merkletreejs";
-import { keccak256, encodePacked } from "viem";
-import { ERC20_ABI, FACTORY_ADDRESS, FACTORY_ABI, PUSH_AIRDROP_ADDRESS, PUSH_AIRDROP_ABI, } from "../constants/contracts";
+import { ERC20_ABI, FACTORY_ADDRESS, FACTORY_ABI, PUSH_AIRDROP_ADDRESS, PUSH_AIRDROP_ABI, TEST_TOKEN_ADDRESS, } from "../constants/contracts";
 import { useNavigate } from "react-router-dom";
-
-const getCampaignModeLabel = (mode) =>
-  mode === "pull" ? "Airdrop" : "Multisend";
-
-const formatCampaignName = ({ customName, symbol = "TOKEN", mode, airdrops }) => {
-  const trimmedCustomName = (customName || "").trim();
-  if (trimmedCustomName) return trimmedCustomName;
-
-  const modeLabel = getCampaignModeLabel(mode);
-  const existingCampaignCount = airdrops.filter((drop) => {
-    const sameSymbol = drop.symbol?.toLowerCase() === symbol.toLowerCase();
-    const sameMode =
-      drop.distributionMode === mode ||
-      drop.name?.toLowerCase().includes(modeLabel.toLowerCase());
-
-    return sameSymbol && sameMode;
-  }).length;
-
-  return `${symbol} • ${modeLabel} ${existingCampaignCount + 1}`;
-};
-
-const formatTransactionError = ({ err, fallback, wallet, to }) => {
-  const message = err?.shortMessage || err?.message || "";
-  const isUserRejected = /user rejected|user denied|denied transaction signature/i.test(
-    message,
-  );
-
-  if (!isUserRejected) return message || fallback;
-
-  const chain = wallet.chainId
-    ? `${wallet.network || "Unknown"} (id: ${wallet.chainId})`
-    : wallet.network || "Unknown";
-
-  return `User rejected the request. Request Arguments: chain: ${chain} from: ${wallet.address} to: ${to}`;
-};
+import { formatCampaignName } from "../utils/campaignDisplay";
+import { getMerkleRoot } from "../utils/merkle";
+import {
+  createPushBatches,
+  parseCSVToRecipientRows,
+  serializeRecipients,
+  validateRecipientRows,
+} from "../utils/recipients";
+import { formatTransactionError } from "../utils/transactionErrors";
 
 export default function CreateAirdrop() {
   const { wallet, connectWallet, setAirdrops, airdrops } = useApp();
@@ -76,36 +48,45 @@ export default function CreateAirdrop() {
   const campaignNameRef = useRef(campaignName);
   const airdropsRef = useRef(airdrops);
 
+  const normalizedTokenAddress = tokenAddress.toLowerCase();
   const isValidTokenAddress = isAddress(tokenAddress);
+  const isInfrastructureContractAddress =
+    isValidTokenAddress &&
+    [FACTORY_ADDRESS, PUSH_AIRDROP_ADDRESS].some(
+      (address) => address.toLowerCase() === normalizedTokenAddress,
+    );
+  const canReadTokenContract = isValidTokenAddress && !isInfrastructureContractAddress;
+  const canUseLocalTestToken =
+    import.meta.env.DEV && TEST_TOKEN_ADDRESS && TEST_TOKEN_ADDRESS !== "0x...";
 
   // --- WAGMI READ CONTRACTS ---
   const { data: tokenDecimals } = useReadContract({
-    address: isValidTokenAddress ? tokenAddress : undefined,
+    address: canReadTokenContract ? tokenAddress : undefined,
     abi: ERC20_ABI,
     functionName: "decimals",
-    query: { enabled: isValidTokenAddress },
+    query: { enabled: canReadTokenContract, retry: false },
   });
 
   const { data: tokenSymbol } = useReadContract({
-    address: isValidTokenAddress ? tokenAddress : undefined,
+    address: canReadTokenContract ? tokenAddress : undefined,
     abi: ERC20_ABI,
     functionName: "symbol",
-    query: { enabled: isValidTokenAddress },
+    query: { enabled: canReadTokenContract, retry: false },
   });
 
   const { data: tokenName } = useReadContract({
-    address: isValidTokenAddress ? tokenAddress : undefined,
+    address: canReadTokenContract ? tokenAddress : undefined,
     abi: ERC20_ABI,
     functionName: "name",
-    query: { enabled: isValidTokenAddress },
+    query: { enabled: canReadTokenContract, retry: false },
   });
 
   const { data: userTokenBalance, refetch: refetchBalance } = useReadContract({
-    address: isValidTokenAddress && wallet.address ? tokenAddress : undefined,
+    address: canReadTokenContract && wallet.address ? tokenAddress : undefined,
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: wallet.address ? [wallet.address] : undefined,
-    query: { enabled: isValidTokenAddress && wallet.isConnected },
+    query: { enabled: canReadTokenContract && wallet.isConnected, retry: false },
   });
 
   const spenderAddress =
@@ -113,11 +94,11 @@ export default function CreateAirdrop() {
 
   const { data: currentAllowance, refetch: refetchAllowance } = useReadContract(
     {
-      address: isValidTokenAddress && wallet.address ? tokenAddress : undefined,
+      address: canReadTokenContract && wallet.address ? tokenAddress : undefined,
       abi: ERC20_ABI,
       functionName: "allowance",
       args: wallet.address ? [wallet.address, spenderAddress] : undefined,
-      query: { enabled: isValidTokenAddress && wallet.isConnected },
+      query: { enabled: canReadTokenContract && wallet.isConnected, retry: false },
     },
   );
 
@@ -157,51 +138,12 @@ export default function CreateAirdrop() {
     airdropsRef.current = airdrops;
   }, [campaignName, airdrops]);
 
-  // --- CSV PARSING UTILITY ---
-  const parseCSVToFormat = (text) => {
-    const lines = text.split(/\r?\n/);
-    const result = [];
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-
-      const parts = trimmed.split(/[;,\t]/).map((p) => p.trim());
-      let address = "";
-      let amount = "";
-
-      for (const part of parts) {
-        if (part.startsWith("0x") && part.length === 42) {
-          address = part;
-        } else if (!isNaN(part) && part !== "" && parseFloat(part) >= 0) {
-          amount = part;
-        }
-      }
-
-      if (!address || !amount) {
-        const spaceParts = trimmed.split(/\s+/).map((p) => p.trim());
-        for (const part of spaceParts) {
-          if (part.startsWith("0x") && part.length === 42) {
-            address = part;
-          } else if (!isNaN(part) && part !== "" && parseFloat(part) >= 0) {
-            amount = part;
-          }
-        }
-      }
-
-      if (address && amount) {
-        result.push(`${address}, ${amount}`);
-      }
-    }
-    return result.join("\n");
-  };
-
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (event) => {
-      const formatted = parseCSVToFormat(event.target.result);
+      const formatted = parseCSVToRecipientRows(event.target.result);
       setRecipients(formatted);
     };
     reader.readAsText(file);
@@ -210,70 +152,11 @@ export default function CreateAirdrop() {
   // --- LIVE VALIDATION ENGINE ---
   useEffect(() => {
     setErrorMsg("");
-    if (!recipients.trim()) {
-      setValidationErrors([]);
-      setParsedEntries([]);
-      setTotalRequiredWei(0n);
-      setFormattedTotal("0");
-      return;
-    }
-
-    const lines = recipients.split("\n");
-    const errors = [];
-    const entries = [];
-    let sumWei = 0n;
-
-    lines.forEach((line, index) => {
-      const trimmed = line.trim();
-      if (!trimmed) return;
-
-      const parts = trimmed.split(",").map((p) => p.trim());
-      if (parts.length !== 2) {
-        errors.push(
-          `Line ${index + 1}: Invalid format. Expected 'address, amount'`,
-        );
-        return;
-      }
-
-      const [addr, amtStr] = parts;
-
-      if (!isAddress(addr)) {
-        errors.push(`Line ${index + 1}: Invalid Ethereum address '${addr}'`);
-      }
-
-      const amtNum = parseFloat(amtStr);
-      if (isNaN(amtNum) || amtNum <= 0) {
-        errors.push(
-          `Line ${index + 1}: Amount '${amtStr}' must be greater than 0`,
-        );
-      } else {
-        try {
-          const amtWei = parseUnits(amtStr, decimals);
-          sumWei += amtWei;
-          entries.push({
-            address: addr,
-            amount: amtStr,
-            amountWei: amtWei,
-            line: index + 1,
-          });
-        } catch (err) {
-          errors.push(
-            `Line ${index + 1}: Amount '${amtStr}' has too many decimal places`,
-          );
-        }
-      }
-    });
-
-    setValidationErrors(errors);
-    if (errors.length === 0) {
-      setParsedEntries(entries);
-      setTotalRequiredWei(sumWei);
-      setFormattedTotal(formatUnits(sumWei, decimals));
-    } else {
-      setParsedEntries([]);
-      setTotalRequiredWei(0n);
-      setFormattedTotal("0");
-    }
+    const validation = validateRecipientRows({ recipients, decimals });
+    setValidationErrors(validation.errors);
+    setParsedEntries(validation.entries);
+    setTotalRequiredWei(validation.totalRequiredWei);
+    setFormattedTotal(validation.formattedTotal);
   }, [recipients, tokenAddress, decimals]);
 
   useEffect(() => {
@@ -300,19 +183,15 @@ export default function CreateAirdrop() {
             clone = decoded.args.cloneAddress;
             break;
           }
-        } catch (e) {}
+        } catch {
+          // Ignore logs emitted by other contracts in the receipt.
+        }
       }
 
       const targetClone = clone || "0x...";
       setDeployedCloneAddress(targetClone);
 
-      const leaves = parsedEntries.map((e) =>
-        keccak256(
-          encodePacked(["address", "uint256"], [e.address, e.amountWei]),
-        ),
-      );
-      const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
-      const root = tree.getHexRoot();
+      const root = getMerkleRoot(parsedEntries);
       setDeployedMerkleRoot(root);
 
       const newDrop = {
@@ -328,15 +207,12 @@ export default function CreateAirdrop() {
         address: targetClone,
         totalAllocation: formattedTotal,
         status: "Active",
-        reward: "Merkle Claim", // Will delete later on
+        reward: "Airdrop", // Will delete later on
         description: `Cryptographic Merkle pull-based claim for ${parsedEntries.length} verified addresses.`,
         distributionMode: "pull",
         tokenAddress: tokenAddress,
         merkleRoot: root,
-        recipients: parsedEntries.map((e) => ({
-          address: e.address,
-          amount: e.amountWei.toString(),
-        })),
+        recipients: serializeRecipients(parsedEntries),
         decimals: decimals,
       };
 
@@ -370,14 +246,11 @@ export default function CreateAirdrop() {
           address: PUSH_AIRDROP_ADDRESS,
           totalAllocation: formattedTotal,
           status: "Completed",
-          reward: "Batch Multi-Send", // Will delete later on
-          description: `Direct batch multi-send distribution complete for ${parsedEntries.length} addresses.`,
+          reward: "Multisend", // Will delete later on
+          description: `Direct batch multisend distribution complete for ${parsedEntries.length} addresses.`,
           distributionMode: "push",
           tokenAddress: tokenAddress,
-          recipients: parsedEntries.map((e) => ({
-            address: e.address,
-            amount: e.amountWei.toString(),
-          })),
+          recipients: serializeRecipients(parsedEntries),
           decimals: decimals,
         };
         setAirdrops((prev) => [newDrop, ...prev]);
@@ -398,6 +271,12 @@ export default function CreateAirdrop() {
         setErrorMsg("Please enter a valid ERC-20 token address.");
         return;
       }
+      if (isInfrastructureContractAddress) {
+        setErrorMsg(
+          "That is a Multidrop contract address. Enter the ERC-20 token address instead.",
+        );
+        return;
+      }
       if (validationErrors.length > 0 || parsedEntries.length === 0) {
         setErrorMsg(
           "Please resolve all validation errors in the recipients list.",
@@ -406,21 +285,7 @@ export default function CreateAirdrop() {
       }
 
       if (distributionMode === "push") {
-        const batches = [];
-        for (let i = 0; i < parsedEntries.length; i += 10) {
-          const chunk = parsedEntries.slice(i, i + 10);
-          const chunkTotal = chunk.reduce(
-            (sum, item) => sum + item.amountWei,
-            0n,
-          );
-          batches.push({
-            recipients: chunk.map((c) => c.address),
-            amounts: chunk.map((c) => c.amountWei),
-            totalRequired: chunkTotal,
-            displayAmount: formatUnits(chunkTotal, decimals),
-          });
-        }
-        setPushBatches(batches);
+        setPushBatches(createPushBatches({ entries: parsedEntries, decimals }));
         setCurrentBatchIndex(0);
       }
 
@@ -455,13 +320,7 @@ export default function CreateAirdrop() {
     setErrorMsg("");
     try {
       if (distributionMode === "pull") {
-        const leaves = parsedEntries.map((e) =>
-          keccak256(
-            encodePacked(["address", "uint256"], [e.address, e.amountWei]),
-          ),
-        );
-        const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
-        const root = tree.getHexRoot();
+        const root = getMerkleRoot(parsedEntries);
 
         const durationInSeconds = BigInt(
           Math.floor(parseFloat(durationDays) * 24 * 60 * 60),
@@ -517,6 +376,7 @@ export default function CreateAirdrop() {
 
   const isFormInvalid =
     !isValidTokenAddress ||
+    isInfrastructureContractAddress ||
     parsedEntries.length === 0 ||
     validationErrors.length > 0;
   const hasApprovedAllowance =
@@ -614,7 +474,16 @@ export default function CreateAirdrop() {
                   <label className="text-xs font-semibold text-slate-300 tracking-wide">
                     Token Address
                   </label>
-                  {isValidTokenAddress && tokenSymbol && (
+                  {canUseLocalTestToken && !tokenAddress && (
+                    <button
+                      type="button"
+                      onClick={() => setTokenAddress(TEST_TOKEN_ADDRESS)}
+                      className="text-[10px] text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/15 px-2 py-0.5 rounded border border-indigo-500/20 transition-colors"
+                    >
+                      Use Local TestToken
+                    </button>
+                  )}
+                  {canReadTokenContract && tokenSymbol && (
                     <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20 font-mono">
                       {tokenSymbol} ({decimals} Decimals)
                     </span>
@@ -627,6 +496,16 @@ export default function CreateAirdrop() {
                   onChange={(e) => setTokenAddress(e.target.value)}
                   className="w-full bg-slate-950/60 border border-slate-900 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 outline-none rounded-xl px-4 py-2.5 text-slate-200 font-mono text-sm transition-all placeholder:text-slate-800"
                 />
+                {isInfrastructureContractAddress && (
+                  <div className="mt-2 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-xl p-3 text-xs flex gap-2">
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400 mt-0.5" />
+                    <span>
+                      This is a Multidrop contract address. Use the ERC-20 token
+                      contract address instead
+                      {canUseLocalTestToken ? `, such as ${TEST_TOKEN_ADDRESS}` : ""}.
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1003,7 +882,7 @@ export default function CreateAirdrop() {
                 <div className="space-y-5 max-w-md mx-auto">
                   <div>
                     <h3 className="text-lg font-semibold text-slate-100">
-                      Direct Batch Multi-Send
+                      Direct Batch Multisend
                     </h3>
                     <p className="text-slate-400 text-xs mt-1">
                       Sequential batch queue: {pushBatches.length} transactions
@@ -1081,7 +960,7 @@ export default function CreateAirdrop() {
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span>
-                          Executing Batch Multi-Send #{currentBatchIndex + 1}...
+                          Executing Batch Multisend #{currentBatchIndex + 1}...
                         </span>
                       </>
                     ) : (

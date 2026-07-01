@@ -1,66 +1,75 @@
-## Foundry
+## Multidrop Contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+This Foundry workspace contains the contracts for the Multidrop dApp:
 
-Foundry consists of:
-
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
+- `MerkleAirdrop.sol` - pull-based claim contract.
+- `AirdropFactory.sol` - deploys and funds Merkle airdrop clones.
+- `PushAirdrop.sol` - push-based ERC-20 multisend helper.
+- `TestToken.sol` - local/testing ERC-20 token.
 
 ## Usage
 
 ### Build
 
 ```shell
-$ forge build
+forge build
 ```
 
 ### Test
 
 ```shell
-$ forge test
+forge test
 ```
 
 ### Format
 
 ```shell
-$ forge fmt
+forge fmt
 ```
 
-### Gas Snapshots
+### Local Anvil
 
 ```shell
-$ forge snapshot
+anvil
 ```
 
-### Anvil
+### Deploy Locally
+
+Create `contracts/.env` from `.env.example` and set:
+
+```text
+deployerPrivateKey=0x...
+creatorPrivateKey=0x...
+```
+
+Then run:
 
 ```shell
-$ anvil
+forge script script/Deploy.s.sol:Deploy --rpc-url http://127.0.0.1:8545 --broadcast
 ```
 
-### Deploy
+### Deploy to Polygon Amoy
+
+Set `AMOY_RPC_URL` in `contracts/.env`, then deploy:
 
 ```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+forge script script/Deploy.s.sol:Deploy --rpc-url $AMOY_RPC_URL --broadcast
 ```
 
-### Cast
+After deployment, copy the logged `Factory Contract Address` and `PushAirdrop Contract Address` into the Vercel environment variables:
 
-```shell
-$ cast <subcommand>
+```text
+VITE_FACTORY_ADDRESS=<deployed factory>
+VITE_PUSH_AIRDROP_ADDRESS=<deployed push helper>
 ```
 
-### Help
+Set `VITE_AMOY_RPC_URL` in Vercel to the same provider network, without exposing private keys to the frontend.
 
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+For local Anvil testing, copy the logged `TestToken Contract Address` into
+`VITE_TEST_TOKEN_ADDRESS` and use that token address in the frontend token
+field. The factory and push helper addresses are spender/distribution contracts,
+not ERC-20 tokens.
+
+### Optional Verification
+
+If you set `POLYGONSCAN_API_KEY`, you can add Polygon Amoy verification settings to the deployment command.
