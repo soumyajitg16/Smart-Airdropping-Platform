@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://your-multidrop-api.example.com/api/:path*"
+      "destination": "https://smart-airdropping-platform.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",

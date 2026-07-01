@@ -8,10 +8,10 @@ import {MerkleAirdrop} from "../src/MerkleAirdrop.sol";
 import {TestToken} from "../src/TestToken.sol";
 import {PushAirdrop} from "../src/PushAirdrop.sol";
 
-//For the Pull model, we need to deploy the implementation contract and the factory contract separately. The factory contract will be used to create new airdrop contracts for each airdrop campaign. The implementation contract will be used as a template for the new airdrop contracts created by the factory.
+// Deployment Script for Amoy testnet with same privatekey for deployer and creator.
 contract Deploy is Script {
     function run () external returns (AirdropFactory) {
-        // Deployer Account Setup
+        // Account Setup
         uint256 deployerKey = vm.envUint("deployerPrivateKey");
         vm.startBroadcast(deployerKey);
 
@@ -27,14 +27,9 @@ contract Deploy is Script {
         // 2) Push Model Deployment
         PushAirdrop pushAirdrop = new PushAirdrop ();
         console.log ("PushAirdrop Contract Address: ", address(pushAirdrop));
-        vm.stopBroadcast();
-
-        //Creator Account Setup
-        uint256 creatorKey = vm.envUint("creatorPrivateKey");
-        vm.startBroadcast(creatorKey);
 
         // Token Deployment
-        TestToken testToken = new TestToken ("Air Token 1", "AirT-1");
+        TestToken testToken = new TestToken ("Air Token", "AirT");
         console.log ("TestToken Contract Address: ", address(testToken));
         vm.stopBroadcast();
 
