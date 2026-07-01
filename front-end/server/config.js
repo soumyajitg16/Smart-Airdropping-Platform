@@ -7,6 +7,7 @@ const parseCorsOrigins = (origin) => {
 
 export const config = {
   port: Number(process.env.API_PORT || process.env.PORT || 5050),
+  host: process.env.HOST || '0.0.0.0',
   mongoUri: process.env.MONGODB_URI,
   dbName: process.env.MONGODB_DB_NAME || 'multidrop',
   collectionName: process.env.MONGODB_CAMPAIGNS_COLLECTION || 'campaigns',

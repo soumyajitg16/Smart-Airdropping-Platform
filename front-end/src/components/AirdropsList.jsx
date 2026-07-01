@@ -1,27 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useApp } from '../hooks/useApp';
-import { Search, ArrowUpRight, Gift, Send } from 'lucide-react';
-
-const getCampaignKind = (drop) => {
-  const mode = drop.distributionMode?.toLowerCase();
-  const reward = drop.reward?.toLowerCase() || '';
-  const isMultisend =
-    mode === 'push' ||
-    reward.includes('multisend');
-
-  return isMultisend
-    ? {
-        label: 'Multisend',
-        Icon: Send,
-        className: 'bg-cyan-500/5 text-cyan-300 border-cyan-500/15',
-      }
-    : {
-        label: 'Airdrop',
-        Icon: Gift,
-        className: 'bg-indigo-500/5 text-indigo-300 border-indigo-500/15',
-      };
-};
+import { Search, ArrowUpRight } from 'lucide-react';
+import { getCampaignKind } from '../utils/campaignDisplay';
 
 export default function AirdropsList() {
   const { airdrops, campaignStorageStatus } = useApp();

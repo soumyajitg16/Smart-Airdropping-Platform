@@ -149,10 +149,11 @@ From the `contracts/` directory:
 forge script script/Deploy.s.sol:Deploy --rpc-url http://127.0.0.1:8545 --broadcast
 ```
 
-After deployment, copy the deployed `AirdropFactory` and `PushAirdrop` addresses into:
+After deployment, copy the deployed `AirdropFactory`, `PushAirdrop`, and
+`TestToken` addresses into:
 
 ```text
-front-end/src/constants/contracts.js
+front-end/.env
 ```
 
 ### 6. Start the frontend
@@ -210,6 +211,73 @@ npm run lint
 npm run preview
 ```
 
+## Online Deployment
+
+Production uses Vercel for the Vite frontend, a hosted Node web service for the Express campaign API, MongoDB Atlas for persistence, and deployed contracts on Polygon Amoy or mainnet. You do not run `anvil` or `vite dev` in production.
+
+### 1. Deploy the API
+
+Deploy the Express API from `front-end/` on Render or Railway.
+
+```text
+Build Command: npm ci
+Start Command: npm run api
+Health Check Path: /api/health
+```
+
+The repository includes `render.yaml` for a Render Blueprint. Set these service environment variables:
+
+```text
+MONGODB_URI=mongodb+srv://...
+MONGODB_DB_NAME=multidrop
+MONGODB_CAMPAIGNS_COLLECTION=campaigns
+CORS_ORIGIN=https://<your-vercel-domain>
+```
+
+Use the MongoDB Atlas connection string for `MONGODB_URI`, and allow the hosted API service to access the Atlas cluster in Atlas Network Access.
+
+### 2. Configure Vercel
+
+Deploy `front-end/` to Vercel with:
+
+```text
+Framework Preset: Vite
+Root Directory: front-end
+Install Command: npm ci
+Build Command: npm run build
+Output Directory: dist
+```
+
+Before deploying, replace the placeholder API host in `front-end/vercel.json`:
+
+```text
+https://your-multidrop-api.example.com
+```
+
+Set this Vercel environment variable so frontend API requests stay same-origin through the Vercel rewrite:
+
+```text
+VITE_CAMPAIGNS_API_URL=/api/campaigns
+```
+
+### 3. Deploy contracts
+
+Deploy to Polygon Amoy first:
+
+```shell
+cd contracts
+forge script script/Deploy.s.sol:Deploy --rpc-url $AMOY_RPC_URL --broadcast
+```
+
+Then set these Vercel environment variables from the deployment logs:
+
+```text
+VITE_FACTORY_ADDRESS=<deployed AirdropFactory address>
+VITE_PUSH_AIRDROP_ADDRESS=<deployed PushAirdrop address>
+VITE_AMOY_RPC_URL=<provider Polygon Amoy RPC URL>
+VITE_ENABLE_ANVIL=false
+```
+
 ## Contract Commands
 
 Run these from `contracts/`:
@@ -223,16 +291,27 @@ anvil
 
 ## Configuration Notes
 
-The frontend currently includes local development contract addresses:
+The frontend defaults to local development contract addresses when deployment env vars are not set:
 
 ```js
-export const FACTORY_ADDRESS = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
-export const PUSH_AIRDROP_ADDRESS = '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0';
+VITE_FACTORY_ADDRESS=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+VITE_PUSH_AIRDROP_ADDRESS=0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+VITE_TEST_TOKEN_ADDRESS=0x8464135c8F25Da09e49BC8782676a84730C318bC
 ```
 
-These are Anvil-style addresses and should be updated after a fresh local deployment or any testnet/mainnet deployment.
+These are Anvil-style addresses for the default local deploy. The factory and
+push addresses are distribution/spender contracts; use the test token address in
+the app's token field. Set `VITE_FACTORY_ADDRESS` and
+`VITE_PUSH_AIRDROP_ADDRESS` in Vercel after any Polygon Amoy/mainnet deployment.
 
-The wagmi config includes placeholder RPC URLs for mainnet and Sepolia. Replace them with real provider URLs before using public networks.
+The wagmi config reads public network RPC URLs from Vite env vars:
+
+```text
+VITE_ANVIL_RPC_URL=http://127.0.0.1:8545
+VITE_AMOY_RPC_URL=<provider Polygon Amoy RPC URL>
+VITE_MAINNET_RPC_URL=<provider mainnet RPC URL>
+VITE_ENABLE_ANVIL=false
+```
 
 Campaign metadata is stored by the API in MongoDB using these frontend `.env` values:
 
@@ -241,9 +320,11 @@ MONGODB_URI=mongodb://127.0.0.1:27017
 MONGODB_DB_NAME=multidrop
 MONGODB_CAMPAIGNS_COLLECTION=campaigns
 API_PORT=5050
+HOST=0.0.0.0
 CORS_ORIGIN=http://localhost:5173
 VITE_API_PROXY_TARGET=http://localhost:5050
 VITE_CAMPAIGNS_API_URL=/api/campaigns
+VITE_TEST_TOKEN_ADDRESS=0x8464135c8F25Da09e49BC8782676a84730C318bC
 ```
 
 Storage behavior:
@@ -251,6 +332,7 @@ Storage behavior:
 - MongoDB is the only source of truth for campaign data.
 - Browser `sessionStorage` and `localStorage` are not used for campaign persistence.
 - If the API is offline, campaigns cannot be loaded or saved permanently.
+- In production, Vercel rewrites `/api/*` to the hosted Express API.
 
 ## Airdrop List Format
 
@@ -273,7 +355,7 @@ Amounts should be token base units, for example `1000000000000000000` for `1` to
 
 - Campaign metadata requires the MongoDB API for loading and saving.
 - Claiming from the frontend requires the original recipient list to reconstruct proofs.
-- Mainnet and Sepolia RPC values are placeholders.
+- Mainnet and Polygon Amoy RPC values must be configured through Vite env vars before production use.
 - `PushAirdrop` limits each transaction to 10 recipients for testing-oriented batching.
 - The frontend build may warn about bundle size.
 - The frontend currently has lint issues documented in `PROJECT_DOCUMENTATION.md`.

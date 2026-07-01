@@ -8,5 +8,6 @@ fs_permissions = [{ access = "read", path = "./airdrop_list.json" }]
 
 [rpc_endpoints]
 localHost = "http://127.0.0.1:8545"
+amoy = "${AMOY_RPC_URL}"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
