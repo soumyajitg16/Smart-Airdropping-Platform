@@ -49,7 +49,7 @@ VITE_FACTORY_ADDRESS=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
 VITE_PUSH_AIRDROP_ADDRESS=0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
 VITE_TEST_TOKEN_ADDRESS=0x8464135c8F25Da09e49BC8782676a84730C318bC
 VITE_ANVIL_RPC_URL=http://127.0.0.1:8545
-VITE_AMOY_RPC_URL=
+VITE_AMOY_RPC_URL=https://rpc-amoy.polygon.technology
 VITE_MAINNET_RPC_URL=
 VITE_ENABLE_ANVIL=true
 ```
@@ -111,7 +111,7 @@ After deploying contracts to Polygon Amoy or mainnet, also set:
 ```text
 VITE_FACTORY_ADDRESS=<deployed AirdropFactory address>
 VITE_PUSH_AIRDROP_ADDRESS=<deployed PushAirdrop address>
-VITE_AMOY_RPC_URL=<provider Polygon Amoy RPC URL>
+VITE_AMOY_RPC_URL=https://rpc-amoy.polygon.technology
 VITE_MAINNET_RPC_URL=<provider mainnet RPC URL, if needed>
 VITE_ENABLE_ANVIL=false
 ```

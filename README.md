@@ -274,7 +274,7 @@ Then set these Vercel environment variables from the deployment logs:
 ```text
 VITE_FACTORY_ADDRESS=<deployed AirdropFactory address>
 VITE_PUSH_AIRDROP_ADDRESS=<deployed PushAirdrop address>
-VITE_AMOY_RPC_URL=<provider Polygon Amoy RPC URL>
+VITE_AMOY_RPC_URL=https://rpc-amoy.polygon.technology
 VITE_ENABLE_ANVIL=false
 ```
 
@@ -308,7 +308,7 @@ The wagmi config reads public network RPC URLs from Vite env vars:
 
 ```text
 VITE_ANVIL_RPC_URL=http://127.0.0.1:8545
-VITE_AMOY_RPC_URL=<provider Polygon Amoy RPC URL>
+VITE_AMOY_RPC_URL=https://rpc-amoy.polygon.technology
 VITE_MAINNET_RPC_URL=<provider mainnet RPC URL>
 VITE_ENABLE_ANVIL=false
 ```

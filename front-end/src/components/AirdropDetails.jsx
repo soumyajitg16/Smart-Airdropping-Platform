@@ -141,7 +141,7 @@ export default function AirdropDetails() {
             <span className="text-slate-500">Contract Verification</span>
             <div className="flex items-center gap-2">
               <span className="font-mono text-slate-400 select-all">{drop.address}</span>
-              <a href={`https://etherscan.io/address/${drop.address}`} target="_blank" rel="noreferrer" className="hover:text-slate-200 transition-colors">
+              <a href={`https://amoy.polygonscan.com/address/${drop.address}`} target="_blank" rel="noreferrer" className="hover:text-slate-200 transition-colors">
                 <ExternalLink className="h-3 w-3 text-slate-600" />
               </a>
               <button 
