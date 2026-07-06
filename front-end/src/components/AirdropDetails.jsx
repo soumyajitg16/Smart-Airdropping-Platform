@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useApp } from '../hooks/useApp';
 import { Copy, ArrowLeft, ExternalLink, ShieldCheck, AlertTriangle, Calendar, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { MERKLE_AIRDROP_ABI } from '../constants/contracts';
+import { isAddress } from 'viem';
+import { ERC20_ABI, MERKLE_AIRDROP_ABI } from '../constants/contracts';
 
 export default function AirdropDetails() {
   const { id } = useParams();
@@ -16,33 +17,33 @@ export default function AirdropDetails() {
   const [copied, setCopied] = useState(false);
 
   const drop = airdrops.find(item => item.id === id);
-
-  if (!drop) {
-    return (
-      <div className="max-w-md mx-auto mt-20 text-center text-slate-400 text-xs">
-        Target identifier registry configuration missing.
-        <button onClick={() => navigate('/airdrops')} className="block mx-auto mt-2 text-indigo-400 hover:underline">Return</button>
-      </div>
-    );
-  }
-
-  const isPull = drop.reward === 'Airdrop';
+  const isPull = drop?.reward === 'Airdrop' || drop?.distributionMode === 'pull';
+  const hasValidDropAddress = Boolean(drop?.address && isAddress(drop.address));
+  const hasValidTokenAddress = Boolean(drop?.tokenAddress && isAddress(drop.tokenAddress));
 
   // --- WAGMI READ CONTRACTS ---
   // Read campaign creator address
   const { data: contractCreator } = useReadContract({
-    address: isPull ? drop.address : undefined,
+    address: isPull && hasValidDropAddress ? drop.address : undefined,
     abi: MERKLE_AIRDROP_ABI,
     functionName: 'creator',
-    query: { enabled: isPull },
+    query: { enabled: isPull && hasValidDropAddress },
   });
 
   // Read campaign deadline timestamp
   const { data: contractDeadline } = useReadContract({
-    address: isPull ? drop.address : undefined,
+    address: isPull && hasValidDropAddress ? drop.address : undefined,
     abi: MERKLE_AIRDROP_ABI,
     functionName: 'deadline',
-    query: { enabled: isPull },
+    query: { enabled: isPull && hasValidDropAddress },
+  });
+
+  const { data: campaignTokenBalance } = useReadContract({
+    address: isPull && hasValidTokenAddress ? drop.tokenAddress : undefined,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: isPull && hasValidDropAddress ? [drop.address] : undefined,
+    query: { enabled: isPull && hasValidTokenAddress && hasValidDropAddress },
   });
 
   // --- WAGMI WRITE CONTRACTS ---
@@ -60,6 +61,12 @@ export default function AirdropDetails() {
     contractCreator && 
     wallet.address && 
     contractCreator.toLowerCase() === wallet.address.toLowerCase();
+
+  useEffect(() => {
+    if (isPull && drop?.id && campaignTokenBalance === 0n && drop.status !== 'Completed') {
+      updateAirdropStatus(drop.id, 'Completed');
+    }
+  }, [campaignTokenBalance, drop?.id, drop?.status, isPull, updateAirdropStatus]);
 
   const handleRefund = async () => {
     setErrorMsg('');
@@ -87,24 +94,38 @@ export default function AirdropDetails() {
   };
 
   useEffect(() => {
-    if (isExpired) {
+    if (
+      drop?.id &&
+      isExpired &&
+      drop.status !== 'Completed' &&
+      campaignTokenBalance !== 0n
+    ) {
       // Synchronize state globally to MongoDB through AppContext.
       updateAirdropStatus(drop.id, 'Expired');
     }
-  }, [deadlineSecs]);
+  }, [campaignTokenBalance, deadlineSecs, drop?.id, drop?.status, isExpired, updateAirdropStatus]);
 
   useEffect(() => {
-    if (isRefundSuccess) {
+    if (drop?.id && isRefundSuccess) {
       setIsRefundComplete(true);
       setRefundTxHash(null);
       // Synchronize state globally to MongoDB through AppContext.
       updateAirdropStatus(drop.id, 'Completed');
     }
-  }, [isRefundSuccess, drop.id]);
+  }, [isRefundSuccess, drop?.id, updateAirdropStatus]);
 
   const formattedDeadlineDate = deadlineSecs 
     ? new Date(deadlineSecs * 1000).toLocaleString() 
     : 'Unknown';
+
+  if (!drop) {
+    return (
+      <div className="max-w-md mx-auto mt-20 text-center text-slate-400 text-xs">
+        Target identifier registry configuration missing.
+        <button onClick={() => navigate('/airdrops')} className="block mx-auto mt-2 text-indigo-400 hover:underline">Return</button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-xl mx-auto mt-16 px-4 text-slate-200 animate-fade-in font-sans">
@@ -137,10 +158,10 @@ export default function AirdropDetails() {
         <p className="text-slate-400 text-xs leading-relaxed mb-6 border-b border-slate-900 pb-5">{drop.description}</p>
 
         <div className="space-y-3.5 text-xs font-medium mb-8">
-          <div className="flex justify-between items-center">
-            <span className="text-slate-500">Contract Verification</span>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-slate-400 select-all">{drop.address}</span>
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-slate-500 shrink-0">Contract Verification</span>
+            <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
+              <span className="min-w-0 max-w-full break-all font-mono text-slate-400 select-all sm:max-w-72 sm:truncate">{drop.address}</span>
               <a href={`https://amoy.polygonscan.com/address/${drop.address}`} target="_blank" rel="noreferrer" className="hover:text-slate-200 transition-colors">
                 <ExternalLink className="h-3 w-3 text-slate-600" />
               </a>

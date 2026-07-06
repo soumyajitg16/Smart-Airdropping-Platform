@@ -13,7 +13,8 @@ The project is split into a Foundry smart-contract workspace and a React/Vite fr
 - Send push-style token distributions through a batch multisend contract.
 - Connect wallets with wagmi and viem.
 - Persist complete campaign metadata through a MongoDB-backed API.
-- Show an Airdrop or Multisend flag on each campaign in the distribution list.
+- Mark pull campaigns completed when all stored recipients have claimed or when the funded campaign vault is drained.
+- Filter the distribution list by status and campaign type, with Airdrop or Multisend flags on each campaign.
 
 ## Project Structure
 
@@ -59,7 +60,8 @@ flowchart LR
 3. Creator approves the factory for the total allocation.
 4. `AirdropFactory` deploys a `MerkleAirdrop` clone and funds it.
 5. Eligible recipients generate proofs from campaign metadata and call `claim`.
-6. After the deadline, the creator can call `refund` for unclaimed tokens.
+6. Successful claims are recorded in campaign metadata; when all stored recipients have claimed, the campaign is marked completed.
+7. After the deadline, the creator can call `refund` for unclaimed tokens.
 
 ### Push Airdrop
 

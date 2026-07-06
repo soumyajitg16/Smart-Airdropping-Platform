@@ -41,7 +41,7 @@ db.getCollection('campaigns').insertMany([
     "symbol": "NBL",
     "address": "0x3333333333333333333333333333333333333333",
     "totalAllocation": "1,200,000",
-    "status": "Active",
+    "status": "Expired",
     "reward": "Airdrop",
     "description": "Demo validator allocation for testnet operators and infrastructure contributors.",
     "distributionMode": "pull",

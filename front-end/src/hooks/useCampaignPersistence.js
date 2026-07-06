@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadCampaigns, saveCampaigns } from '../services/campaignStore';
 
 export const useCampaignPersistence = () => {
@@ -49,16 +49,61 @@ export const useCampaignPersistence = () => {
       });
   }, [airdrops]);
 
-  const updateAirdropStatus = (id, newStatus) => {
+  const updateAirdropStatus = useCallback((id, newStatus) => {
     setAirdrops((prev) =>
-      prev.map((drop) => (drop.id === id ? { ...drop, status: newStatus } : drop)),
+      prev.map((drop) =>
+        drop.id === id && drop.status !== newStatus
+          ? { ...drop, status: newStatus }
+          : drop,
+      ),
     );
-  };
+  }, []);
+
+  const markAirdropClaimed = useCallback((id, claimantAddress) => {
+    if (!id || !claimantAddress) return;
+
+    const normalizedClaimant = claimantAddress.toLowerCase();
+
+    setAirdrops((prev) =>
+      prev.map((drop) => {
+        if (drop.id !== id) return drop;
+
+        const recipientAddresses = new Set(
+          (drop.recipients || [])
+            .map((recipient) => recipient.address?.toLowerCase())
+            .filter(Boolean),
+        );
+
+        const claimedRecipients = new Set(
+          (drop.claimedRecipients || [])
+            .map((address) => String(address).toLowerCase())
+            .filter(Boolean),
+        );
+
+        if (recipientAddresses.has(normalizedClaimant)) {
+          claimedRecipients.add(normalizedClaimant);
+        }
+
+        const isFullyClaimed =
+          recipientAddresses.size > 0 &&
+          Array.from(recipientAddresses).every((address) =>
+            claimedRecipients.has(address),
+          );
+
+        return {
+          ...drop,
+          claimedRecipients: Array.from(claimedRecipients),
+          status: isFullyClaimed ? 'Completed' : drop.status,
+        };
+      }),
+    );
+  }, []);
 
   return {
     airdrops,
     setAirdrops,
     updateAirdropStatus,
+    markAirdropClaimed,
     campaignStorageStatus,
   };
 };

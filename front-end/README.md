@@ -31,6 +31,9 @@ Campaign details are stored permanently in MongoDB through the local API server 
 The browser does not use `localStorage` or `sessionStorage` for campaign persistence.
 
 The `/airdrops` page reads campaigns from MongoDB without requiring wallet connection and shows an `Airdrop` or `Multisend` flag for each campaign.
+It defaults to all campaigns and lets users filter by status (`Active`, `Expired`, `Completed`) and type (`Airdrop`, `Multisend`).
+
+Pull airdrop claim activity is also synced into campaign metadata. When the stored recipient list has fully claimed, or when the campaign detail page sees the funded token balance at zero, the campaign status is persisted as `Completed`.
 
 ## Local Setup
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'; // 1. Added useRef
+import { useState, useEffect, useRef } from 'react'; // 1. Added useRef
 import { useApp } from '../hooks/useApp';
 import { Search, UserCheck, Sparkles, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { isAddress, formatUnits } from 'viem';
@@ -8,7 +8,7 @@ import { useSearchParams } from 'react-router-dom'; // 2. Added useSearchParams
 import { getMerkleProof } from '../utils/merkle';
 
 export default function ClaimToken() {
-  const { wallet, connectWallet, airdrops } = useApp();
+  const { wallet, connectWallet, airdrops, markAirdropClaimed } = useApp();
   const [searchParams] = useSearchParams(); // 3. Invoke query params parser hook
   
   // 4. Initialize searchQuery reactive state directly from URL parameter fallback
@@ -28,7 +28,7 @@ export default function ClaimToken() {
 
   // --- WAGMI READ CONTRACTS ---
   // Check if claimant has already claimed
-  const { data: hasClaimed, refetch: refetchHasClaimed, isLoading: isLoadingHasClaimed } = useReadContract({
+  const { data: hasClaimed, refetch: refetchHasClaimed } = useReadContract({
     address: isValidCloneAddress ? searchQuery : undefined,
     abi: MERKLE_AIRDROP_ABI,
     functionName: 'hasClaimed',
@@ -53,7 +53,7 @@ export default function ClaimToken() {
   // --- WAGMI WRITE CONTRACTS ---
   const { writeContractAsync: executeClaim, isPending: isClaimPending } = useWriteContract();
 
-  const { isLoading: isWaitingClaim, isSuccess: isClaimSuccess, error: txError } = useWaitForTransactionReceipt({
+  const { isLoading: isWaitingClaim, isSuccess: isClaimSuccess } = useWaitForTransactionReceipt({
     hash: claimTxHash,
   });
 
@@ -131,10 +131,17 @@ export default function ClaimToken() {
   useEffect(() => {
     if (isClaimSuccess) {
       refetchHasClaimed();
+      markAirdropClaimed(activeCampaign?.id, wallet.address);
       setClaimStatus('success');
       setClaimTxHash(null);
     }
-  }, [isClaimSuccess]);
+  }, [isClaimSuccess, activeCampaign?.id, markAirdropClaimed, refetchHasClaimed, wallet.address]);
+
+  useEffect(() => {
+    if (activeCampaign && hasClaimed && wallet.address) {
+      markAirdropClaimed(activeCampaign.id, wallet.address);
+    }
+  }, [activeCampaign, hasClaimed, markAirdropClaimed, wallet.address]);
 
   const handleClaim = async () => {
     setClaimError('');
