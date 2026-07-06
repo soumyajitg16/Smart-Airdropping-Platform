@@ -4,6 +4,7 @@ import CreateAirdrop from '../components/CreateAirdrop';
 import AirdropsList from '../components/AirdropsList';
 import AirdropDetails from '../components/AirdropDetails';
 import ClaimToken from '../components/ClaimToken';
+import GuidePage from '../components/GuidePage';
 
 export default function AppRoutes() {
   return (
@@ -14,6 +15,7 @@ export default function AppRoutes() {
           <Route path="/airdrops" element={<AirdropsList />} />
           <Route path="/airdrops/:id" element={<AirdropDetails />} />
           <Route path="/claim" element={<ClaimToken />} />
+          <Route path="/guide" element={<GuidePage />} />
         </Route>
       </Routes>
     </BrowserRouter>

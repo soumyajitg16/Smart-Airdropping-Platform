@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router';
 import { useApp } from '../hooks/useApp';
 import { Wallet } from 'lucide-react';
@@ -17,8 +17,8 @@ export default function Navbar() {
     }`;
 
   return (
-    <nav className="bg-slate-950/70 border-b border-slate-900/80 text-white sticky top-0 z-40 px-6 py-2 backdrop-blur-xl">
-      <div className="max-w-7xl mx-auto flex justify-between items-center">
+    <nav className="bg-slate-950/70 border-b border-slate-900/80 text-white sticky top-0 z-40 px-4 py-2 backdrop-blur-xl sm:px-6">
+      <div className="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-3">
         
         {/* Streamlined Text Logo */}
         <div className="cursor-pointer group" onClick={() => navigate('/')}>
@@ -28,12 +28,13 @@ export default function Navbar() {
         </div>
 
         {/* Right-Aligned Navigation & Action Utilities Pack */}
-        <div className="flex items-center space-x-4">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           {/* Links Shifted Right */}
-          <div className="flex space-x-1 bg-slate-900/40 p-0.5 rounded-xl border border-slate-900 shadow-inner">
+          <div className="flex max-w-full space-x-1 overflow-x-auto bg-slate-900/40 p-0.5 rounded-xl border border-slate-900 shadow-inner">
             <NavLink to="/" className={navItemStyles}>Home</NavLink>
             <NavLink to="/airdrops" className={navItemStyles}>Campaigns</NavLink>
             <NavLink to="/claim" className={navItemStyles}>Claim</NavLink>
+            <NavLink to="/guide" className={navItemStyles}>Guide</NavLink>
           </div>
 
           {/* Wallet Execution Trigger */}

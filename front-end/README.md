@@ -33,6 +33,8 @@ The browser does not use `localStorage` or `sessionStorage` for campaign persist
 The `/airdrops` page reads campaigns from MongoDB without requiring wallet connection and shows an `Airdrop` or `Multisend` flag for each campaign.
 It defaults to all campaigns and lets users filter by status (`Active`, `Expired`, `Completed`) and type (`Airdrop`, `Multisend`).
 
+The `/guide` page provides role-based guidance for creators and recipients, with links into the create, campaigns, and claim workflows.
+
 Pull airdrop claim activity is also synced into campaign metadata. When the stored recipient list has fully claimed, or when the campaign detail page sees the funded token balance at zero, the campaign status is persisted as `Completed`.
 
 ## Local Setup
@@ -95,7 +97,7 @@ Output Directory: dist
 The included `vercel.json` handles two production routing concerns:
 
 - `/api/:path*` is proxied to the hosted Express API.
-- React Router deep links such as `/airdrops/:id` and `/claim` are served by `index.html`.
+- React Router deep links such as `/airdrops/:id`, `/claim`, and `/guide` are served by `index.html`.
 
 Before the Vercel production deploy, replace this placeholder in `vercel.json` with your hosted API URL:
 

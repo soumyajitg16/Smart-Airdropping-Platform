@@ -223,7 +223,7 @@ export default function AirdropDetails() {
             {isRefundComplete || drop.status === 'Completed' ? (
               <div className="bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 rounded-xl p-3 text-xs flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
-                <span>Tokens swept and refunded successfully to your creator wallet!</span>
+                <span>Tokens swept successfully!</span>
               </div>
             ) : isExpired ? (
               <div className="space-y-3.5 pt-2">
