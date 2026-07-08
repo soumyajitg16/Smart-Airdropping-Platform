@@ -38,6 +38,7 @@ const startServer = async () => {
 
   app.listen(config.port, config.host, () => {
     console.log(`Campaign API listening on http://${config.host}:${config.port}`);
+    console.log(`Check API health on http://${config.host}:${config.port}/api/health`);
   });
 };
 

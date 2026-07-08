@@ -1,17 +1,18 @@
-import { useState, useEffect, useRef } from 'react'; // 1. Added useRef
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../hooks/useApp';
 import { Search, UserCheck, Sparkles, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { isAddress, formatUnits } from 'viem';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { MERKLE_AIRDROP_ABI } from '../constants/contracts';
-import { useSearchParams } from 'react-router-dom'; // 2. Added useSearchParams
+import { useSearchParams } from 'react-router-dom';
 import { getMerkleProof } from '../utils/merkle';
+
+const VERIFICATION_DELAY_MS = 250;
 
 export default function ClaimToken() {
   const { wallet, connectWallet, airdrops, markAirdropClaimed } = useApp();
-  const [searchParams] = useSearchParams(); // 3. Invoke query params parser hook
+  const [searchParams] = useSearchParams();
   
-  // 4. Initialize searchQuery reactive state directly from URL parameter fallback
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get('address') || '');
   const [activeCampaign, setActiveCampaign] = useState(null);
   const [isVerified, setIsVerified] = useState(false);
@@ -23,6 +24,9 @@ export default function ClaimToken() {
 
   // Transaction tracking
   const [claimTxHash, setClaimTxHash] = useState(null);
+  const verificationTimerRef = useRef(null);
+  const autoVerifiedKeyRef = useRef('');
+  const processedClaimTxHashRef = useRef(null);
 
   const isValidCloneAddress = isAddress(searchQuery);
 
@@ -44,7 +48,6 @@ export default function ClaimToken() {
     query: { enabled: isValidCloneAddress },
   });
 
-  // 5. Save contractDeadline in a ref to safely bypass setTimeout closures
   const deadlineRef = useRef(contractDeadline);
   useEffect(() => {
     deadlineRef.current = contractDeadline;
@@ -56,9 +59,13 @@ export default function ClaimToken() {
   const { isLoading: isWaitingClaim, isSuccess: isClaimSuccess } = useWaitForTransactionReceipt({
     hash: claimTxHash,
   });
+  const hasClaimSucceeded = Boolean(claimTxHash && isClaimSuccess);
 
-  // 6. Split core validation query logic to a reusable method
-  const performVerification = (targetAddress) => {
+  const performVerification = useCallback((targetAddress) => {
+    if (verificationTimerRef.current) {
+      clearTimeout(verificationTimerRef.current);
+    }
+
     setClaimError('');
     setIsVerified(false);
 
@@ -70,10 +77,10 @@ export default function ClaimToken() {
 
     setClaimStatus('searching');
 
-    // Look up clone address in our stored campaigns
-    const campaign = airdrops.find(item => item.address.toLowerCase() === targetAddress.toLowerCase());
-    
-    setTimeout(() => {
+    verificationTimerRef.current = setTimeout(() => {
+      // Look up clone address in our stored campaigns
+      const campaign = airdrops.find(item => item.address.toLowerCase() === targetAddress.toLowerCase());
+      
       if (!campaign) {
         setClaimError('Campaign configuration not found in local index registry. Verify the contract address.');
         setClaimStatus('error');
@@ -111,31 +118,52 @@ export default function ClaimToken() {
       setClaimantFormattedAmount(formatUnits(amountWei, campaign.decimals || 18));
       setActiveCampaign(campaign);
       setClaimStatus('eligible');
-    }, 800);
-  };
+    }, VERIFICATION_DELAY_MS);
+  }, [airdrops, wallet.address, wallet.isConnected]);
 
   const handleSearch = (e) => {
     if (e) e.preventDefault();
     performVerification(searchQuery);
   };
 
-  // 7. Auto-verify if an address parameter is parsed on load once systemic indices mount
   useEffect(() => {
     const addressParam = searchParams.get('address');
-    if (addressParam && isAddress(addressParam) && wallet.isConnected && airdrops.length > 0) {
+    const walletAddress = wallet.address?.toLowerCase() || '';
+    const autoVerifyKey = `${addressParam?.toLowerCase() || ''}:${walletAddress}`;
+
+    if (
+      !hasClaimSucceeded &&
+      addressParam &&
+      isAddress(addressParam) &&
+      wallet.isConnected &&
+      walletAddress &&
+      airdrops.length > 0 &&
+      autoVerifiedKeyRef.current !== autoVerifyKey
+    ) {
+      autoVerifiedKeyRef.current = autoVerifyKey;
       performVerification(addressParam);
     }
-  }, [searchParams, wallet.isConnected, airdrops]);
+  }, [searchParams, wallet.address, wallet.isConnected, airdrops.length, hasClaimSucceeded, performVerification]);
 
   // Run validation checks when claims finish
   useEffect(() => {
-    if (isClaimSuccess) {
+    if (hasClaimSucceeded && processedClaimTxHashRef.current !== claimTxHash) {
+      processedClaimTxHashRef.current = claimTxHash;
+
+      if (verificationTimerRef.current) {
+        clearTimeout(verificationTimerRef.current);
+      }
+
       refetchHasClaimed();
       markAirdropClaimed(activeCampaign?.id, wallet.address);
-      setClaimStatus('success');
-      setClaimTxHash(null);
     }
-  }, [isClaimSuccess, activeCampaign?.id, markAirdropClaimed, refetchHasClaimed, wallet.address]);
+  }, [hasClaimSucceeded, claimTxHash, activeCampaign?.id, markAirdropClaimed, refetchHasClaimed, wallet.address]);
+
+  useEffect(() => () => {
+    if (verificationTimerRef.current) {
+      clearTimeout(verificationTimerRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (activeCampaign && hasClaimed && wallet.address) {
@@ -167,6 +195,7 @@ export default function ClaimToken() {
         account: wallet.address,
       });
       
+      processedClaimTxHashRef.current = null;
       setClaimTxHash(hash);
     } catch (err) {
       setClaimError(err.message || 'Claim transaction rejected.');
@@ -218,7 +247,7 @@ export default function ClaimToken() {
           </div>
         )}
 
-        {claimStatus === 'eligible' && activeCampaign && (
+        {claimStatus === 'eligible' && activeCampaign && !hasClaimSucceeded && (
           <div className="space-y-5 animate-fade-in">
             {hasClaimed ? (
               <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl p-4 flex items-start gap-3">
@@ -286,7 +315,7 @@ export default function ClaimToken() {
           </div>
         )}
 
-        {claimStatus === 'success' && (
+        {hasClaimSucceeded && (
           <div className="text-center py-6 space-y-3.5 animate-fade-in">
             <div className="h-10 w-10 bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto">
               <CheckCircle2 className="h-5 w-5" />
@@ -296,7 +325,7 @@ export default function ClaimToken() {
               The transaction was successful. Your claimed tokens have been transferred to your connected wallet.
             </p>
             <button 
-              onClick={() => { setClaimStatus('idle'); setSearchQuery(''); setIsVerified(false); setActiveCampaign(null); }} 
+              onClick={() => { processedClaimTxHashRef.current = null; setClaimTxHash(null); setClaimStatus('idle'); setSearchQuery(''); setIsVerified(false); setActiveCampaign(null); }} 
               className="pt-2 text-xs text-slate-400 hover:text-slate-200 underline underline-offset-4 decoration-slate-700 cursor-pointer"
             >
               Go back to dashboard

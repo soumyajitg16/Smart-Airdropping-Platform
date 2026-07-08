@@ -20,12 +20,19 @@ export default function Navbar() {
     <nav className="bg-slate-950/70 border-b border-slate-900/80 text-white sticky top-0 z-40 px-4 py-2 backdrop-blur-xl sm:px-6">
       <div className="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-3">
         
-        {/* Streamlined Text Logo */}
-        <div className="cursor-pointer group" onClick={() => navigate('/')}>
-          <span className="font-bold text-sm tracking-wider bg-linear-to-r from-slate-100 to-indigo-300 bg-clip-text text-transparent uppercase">
-            MULTIDROP
-          </span>
-        </div>
+        {/* Brand Logo */}
+        <button
+          type="button"
+          className="group flex cursor-pointer items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+          onClick={() => navigate('/')}
+          aria-label="Go to Multidrop home"
+        >
+          <img
+            src="/logo.svg"
+            alt="Multidrop"
+            className="h-8 w-auto transition-opacity duration-300 group-hover:opacity-90"
+          />
+        </button>
 
         {/* Right-Aligned Navigation & Action Utilities Pack */}
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
