@@ -205,7 +205,7 @@ export default function ClaimToken() {
   const isClaimButtonDisabled = !isVerified || isClaimPending || isWaitingClaim || hasClaimed;
 
   return (
-    <div className="max-w-lg mx-auto mt-16 px-4 text-white animate-fade-in">
+    <div className="max-w-lg mx-auto mt-16 px-4 text-slate-100 animate-fade-in">
       <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-8 shadow-2xl">
         <div className="text-center mb-6">
           <h2 className="text-xl font-semibold tracking-tight">Verify Airdrop Eligibility</h2>

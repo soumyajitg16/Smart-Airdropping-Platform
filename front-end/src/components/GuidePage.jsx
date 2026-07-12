@@ -153,7 +153,7 @@ export default function GuidePage() {
   const visibleSteps = activeRole === 'creator' ? creatorSteps : recipientSteps;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-12 text-white animate-fade-in">
+    <div className="mx-auto max-w-5xl px-4 pt-12 text-slate-100 animate-fade-in">
       <div className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div className="max-w-2xl">
           <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-300">

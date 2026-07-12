@@ -97,7 +97,7 @@ export default function AirdropsList() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto mt-16 px-4 text-white animate-fade-in">
+    <div className="max-w-3xl mx-auto mt-16 px-4 text-slate-100 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">All Distributions</h1>
@@ -219,7 +219,7 @@ export default function AirdropsList() {
                       drop.status === 'Expired'
                         ? 'bg-red-500/5 text-red-400 border-red-500/10'
                         : drop.status === 'Completed'
-                          ? 'bg-slate-800/85 text-slate-400 border-slate-700/50'
+                          ? 'status-badge-completed bg-slate-800/85 text-slate-300 border-slate-700/50'
                           : 'bg-emerald-500/5 text-emerald-400 border-emerald-500/10'
                     }`}>
                       {drop.status || 'Draft'}

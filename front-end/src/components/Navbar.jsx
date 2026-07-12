@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router';
 import { useApp } from '../hooks/useApp';
-import { Wallet } from 'lucide-react';
+import { Moon, Sun, Wallet } from 'lucide-react';
 import WalletModal from './WalletModal';
 
-export default function Navbar() {
+export default function Navbar({ theme = 'dark', onToggleTheme }) {
   const { wallet, connectWallet } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
@@ -28,7 +28,7 @@ export default function Navbar() {
           aria-label="Go to Multidrop home"
         >
           <img
-            src="/logo.svg"
+            src={theme === 'light' ? '/logo-light.svg' : '/logo.svg'}
             alt="Multidrop"
             className="h-8 w-auto transition-opacity duration-300 group-hover:opacity-90"
           />
@@ -43,6 +43,20 @@ export default function Navbar() {
             <NavLink to="/claim" className={navItemStyles}>Claim</NavLink>
             <NavLink to="/guide" className={navItemStyles}>Guide</NavLink>
           </div>
+
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-800/80 bg-slate-900/90 text-slate-300 shadow-sm transition-all hover:border-slate-700 hover:bg-slate-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 cursor-pointer"
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+          >
+            {theme === 'dark' ? (
+              <Sun className="h-3.5 w-3.5" />
+            ) : (
+              <Moon className="h-3.5 w-3.5" />
+            )}
+          </button>
 
           {/* Wallet Execution Trigger */}
           <div className="relative">
